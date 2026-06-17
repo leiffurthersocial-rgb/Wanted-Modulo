@@ -39,9 +39,111 @@ export const CITY = {
 /** Derived: total spacing between block centers. */
 export const CITY_PITCH = CITY.blockSize + CITY.roadWidth
 
-/** Scoring weights (prototype baseline; tuned with the chase system later). */
+/** Scoring weights. */
 export const SCORE = {
   perSecond: 10,
   perDistanceUnit: 0.4,
   peakHeatBonus: 250,
+  nearMiss: 60,
+  copDestroyed: 400,
+  propDestroyed: 5,
+} as const
+
+/* -------------------------------------------------------------------------- */
+/*  Phase 5 — Vehicle damage                                                   */
+/* -------------------------------------------------------------------------- */
+
+export const DAMAGE = {
+  /** Health ratio thresholds for each visual/behaviour tier. */
+  dented: 0.6,
+  smoking: 0.35,
+  onfire: 0.15,
+  /** HP drained per second while a vehicle is on fire. */
+  fireDps: 14,
+  /** Minimum impact speed (units/s) that produces collision damage. */
+  minImpactSpeed: 6,
+  /** Collision damage = (impactSpeed - min) * scale, modulated by mass. */
+  impactScale: 3.2,
+  /** Visual squash applied to a body on impact (decays each frame). */
+  impactSquash: 0.18,
+} as const
+
+/* -------------------------------------------------------------------------- */
+/*  Phase 6 — Heat, pursuit AI & capture                                       */
+/* -------------------------------------------------------------------------- */
+
+export const HEAT = {
+  /** Heat (float) rises this fast per second while the player is spotted. */
+  spottedRise: 0.13,
+  /** Heat decays this fast per second while hidden (down to the floor). */
+  hiddenDecay: 0.18,
+  /** Seconds of survival required to push the heat floor up by one level. */
+  floorTimePerLevel: 26,
+  /** Grace period (s) after losing sight before units enter SEARCH. */
+  lostGrace: 2.2,
+  /** Seconds a search persists before units give up and heat can fall. */
+  searchTimeout: 9,
+} as const
+
+export const POLICE = {
+  maxUnits: 20,
+  maxHelis: 3,
+  /** Ground unit sight range and field-of-view (radians, half-angle). */
+  sightRange: 70,
+  sightFov: 1.15,
+  /** Distance from the player at which new units spawn (off-screen-ish). */
+  spawnRadius: 95,
+  despawnRadius: 170,
+  /** Seconds between spawn attempts when below the heat target. */
+  spawnInterval: 1.1,
+  /** Steering gain converting heading error -> steer input. */
+  steerGain: 2.4,
+  /** Lead time (s) for predicting the player's future position. */
+  predictLead: 0.7,
+  /** Helicopter follow height and sight radius (ignores building cover). */
+  heliHeight: 26,
+  heliSightRadius: 85,
+  heliSpeed: 26,
+  /** Heat at/above which helicopters appear and attack-runs begin. */
+  heliMinHeat: 4,
+  attackHeliMinHeat: 8,
+} as const
+
+export const CAPTURE = {
+  /** Radius within which a stopped/slow player is being captured. */
+  radius: 6.5,
+  /** Player speed (units/s) below which capture can progress. */
+  slowSpeed: 5,
+  /** Capture progress gained per second per nearby unit. */
+  ratePerUnit: 0.5,
+  /** On-foot multiplier — far more vulnerable. */
+  onFootMultiplier: 2.4,
+  /** Recovery per second when clear. */
+  recover: 0.7,
+  /** Near-miss detection radius and minimum closing speed. */
+  nearMissRadius: 4.5,
+  nearMissSpeed: 14,
+} as const
+
+/* -------------------------------------------------------------------------- */
+/*  Phase 7 — Destruction & particles                                          */
+/* -------------------------------------------------------------------------- */
+
+export const PARTICLES = {
+  max: 420,
+  gravity: -26,
+  groundFriction: 0.78,
+  bounce: 0.32,
+} as const
+
+export const PROPS = {
+  /** Approximate spacing of the candidate scatter grid. */
+  spacing: 7,
+  /** Probability a free candidate point becomes a prop. */
+  density: 0.5,
+  max: 520,
+  /** Player speed needed to smash a prop. */
+  smashSpeed: 5,
+  /** Speed lost when plowing through a prop, scaled by mass. */
+  smashDrag: 3.5,
 } as const

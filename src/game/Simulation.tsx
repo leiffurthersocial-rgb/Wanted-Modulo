@@ -1,174 +1,72 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import type { CharacterId, VehicleDef } from '@/types'
-import { CAMERA, CITY, CITY_PITCH, PLAYER, SIM } from '@/config/constants'
+import type { CharacterId } from '@/types'
+import { CAMERA, HEAT, SIM } from '@/config/constants'
 import { Input } from '@/core/input/InputManager'
-import { dampAngle } from '@/core/math/angles'
 import { useGameStore } from '@/state/useGameStore'
+import { useFleetStore } from '@/state/useFleetStore'
 import { CHARACTERS } from '@/game/characters/characterCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
-import { stepVehicle, type VehicleState } from '@/game/vehicles/vehiclePhysics'
+import type { PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { VoxelCharacter } from '@/game/models/VoxelCharacter'
 import { VoxelVehicle } from '@/game/models/VoxelVehicle'
+import { Registry } from '@/game/sim/registry'
+import { createSimState } from '@/game/sim/state'
+import { stepSim } from '@/game/sim/step'
 
-interface PlayerSim {
-  pos: THREE.Vector3
-  heading: number
-  mode: 'foot' | 'vehicle'
-  vehicleIndex: number
-}
+// Shared scratch objects (single-threaded — safe to reuse).
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0)
+const IDENT_Q = new THREE.Quaternion()
+const tmpM = new THREE.Matrix4()
+const tmpScale = new THREE.Vector3()
 
-interface VehicleSim {
-  def: VehicleDef
-  pos: THREE.Vector3
-  state: VehicleState
-  occupied: boolean
-}
-
-interface Accumulators {
-  time: number
-  distance: number
-  topSpeed: number
-  vehiclesUsed: number
-  statTimer: number
-}
-
-const WORLD_HALF = (CITY.blocks * CITY_PITCH) / 2 + CITY_PITCH
-
-/**
- * The authoritative game tick. One `useFrame` advances input, player/vehicle
- * movement, the chase camera, and (throttled) HUD stats — all via mutable refs
- * so the hot loop never triggers a React re-render.
- */
 export function Simulation({ characterId }: { characterId: CharacterId }) {
   const { camera } = useThree()
+  const setPoliceClasses = useFleetStore((s) => s.setPoliceClasses)
 
   const playerRef = useRef<THREE.Group>(null)
   const vehicleRefs = useRef<(THREE.Group | null)[]>([])
   const lookTarget = useRef(new THREE.Vector3())
+  const peakHeat = useRef(0)
+  const prevClasses = useRef<PoliceClassId[]>(useFleetStore.getState().policeClasses.slice())
 
-  // One-time simulation state (mutable, non-reactive).
-  const sim = useMemo(() => {
-    const player: PlayerSim = {
-      pos: new THREE.Vector3(...PLAYER.spawn),
-      heading: 0,
-      mode: 'foot',
-      vehicleIndex: -1,
-    }
-    const vehicles: VehicleSim[] = VEHICLE_SPAWNS.map((s) => ({
-      def: s.def,
-      pos: new THREE.Vector3(...s.position),
-      state: { heading: s.heading, speed: 0 },
-      occupied: false,
-    }))
-    const acc: Accumulators = {
-      time: 0,
-      distance: 0,
-      topSpeed: 0,
-      vehiclesUsed: 0,
-      statTimer: 0,
-    }
-    return { player, vehicles, acc }
-  }, [])
+  const sim = useMemo(() => createSimState(), [])
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, SIM.maxDt)
     const store = useGameStore.getState()
 
-    // --- Pause toggle works regardless of phase ---
+    // Pause toggle works in any phase.
     if (Input.consumePressed('pause')) {
       if (store.phase === 'playing') store.pause()
       else if (store.phase === 'paused') store.resume()
     }
-
     if (store.phase !== 'playing') {
       Input.lateUpdate()
       return
     }
 
-    const { player, vehicles, acc } = sim
+    // --- Advance the simulation ---
     const snap = Input.snapshot()
+    stepSim(
+      sim,
+      {
+        forward: snap.forward,
+        backward: snap.backward,
+        left: snap.left,
+        right: snap.right,
+        interactPressed: Input.consumePressed('interact'),
+      },
+      dt,
+    )
 
-    // --- Enter / exit / steal vehicle ---
-    if (Input.consumePressed('interact')) {
-      if (player.mode === 'foot') {
-        let best = -1
-        let bestDist = PLAYER.enterRadius * PLAYER.enterRadius
-        for (let i = 0; i < vehicles.length; i++) {
-          if (vehicles[i].occupied) continue
-          const d = vehicles[i].pos.distanceToSquared(player.pos)
-          if (d < bestDist) {
-            bestDist = d
-            best = i
-          }
-        }
-        if (best >= 0) {
-          player.mode = 'vehicle'
-          player.vehicleIndex = best
-          vehicles[best].occupied = true
-          player.heading = vehicles[best].state.heading
-          acc.vehiclesUsed++
-        }
-      } else {
-        const v = vehicles[player.vehicleIndex]
-        v.occupied = false
-        v.state.speed = 0
-        // Step out to the left of the vehicle.
-        const lx = Math.cos(v.state.heading)
-        const lz = -Math.sin(v.state.heading)
-        player.pos.set(
-          v.pos.x + lx * (v.def.size.width + 1),
-          0,
-          v.pos.z + lz * (v.def.size.width + 1),
-        )
-        player.mode = 'foot'
-        player.vehicleIndex = -1
-      }
-    }
-
-    // --- Movement ---
-    let currentSpeed = 0
-    let movedThisFrame = 0
-
-    if (player.mode === 'foot') {
-      const ix = (snap.right ? 1 : 0) - (snap.left ? 1 : 0)
-      const iz = (snap.backward ? 1 : 0) - (snap.forward ? 1 : 0)
-      const len = Math.hypot(ix, iz)
-      if (len > 0) {
-        const nx = ix / len
-        const nz = iz / len
-        const step = PLAYER.footSpeed * dt
-        player.pos.x += nx * step
-        player.pos.z += nz * step
-        player.heading = dampAngle(player.heading, Math.atan2(nx, nz), PLAYER.turnLerp, dt)
-        currentSpeed = PLAYER.footSpeed
-        movedThisFrame = step
-      }
-    } else {
-      const v = vehicles[player.vehicleIndex]
-      const throttle = (snap.forward ? 1 : 0) - (snap.backward ? 1 : 0)
-      const steer = (snap.right ? 1 : 0) - (snap.left ? 1 : 0)
-      const { dx, dz } = stepVehicle(v.state, { throttle, steer }, v.def, dt)
-      v.pos.x += dx
-      v.pos.z += dz
-      player.pos.copy(v.pos)
-      player.heading = v.state.heading
-      currentSpeed = Math.abs(v.state.speed)
-      movedThisFrame = currentSpeed * dt
-    }
-
-    // Keep within world bounds.
-    player.pos.x = THREE.MathUtils.clamp(player.pos.x, -WORLD_HALF, WORLD_HALF)
-    player.pos.z = THREE.MathUtils.clamp(player.pos.z, -WORLD_HALF, WORLD_HALF)
-    if (player.mode === 'vehicle') {
-      vehicles[player.vehicleIndex].pos.x = player.pos.x
-      vehicles[player.vehicleIndex].pos.z = player.pos.z
-    }
+    const { player } = sim
 
     // --- Chase camera ---
-    const camHeading = player.mode === 'vehicle' ? player.heading : 0
-    const cfg = player.mode === 'vehicle' ? CAMERA.vehicle : CAMERA.foot
+    const inVehicle = player.mode === 'vehicle'
+    const camHeading = inVehicle ? player.heading : 0
+    const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
     const fx = Math.sin(camHeading)
     const fz = Math.cos(camHeading)
     const desiredX = player.pos.x - fx * cfg.distance
@@ -183,33 +81,117 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     lookTarget.current.z += (player.pos.z - lookTarget.current.z) * lookT
     camera.lookAt(lookTarget.current)
 
-    // --- Commit transforms to the scene graph ---
+    // --- Commit player + world vehicles ---
     if (playerRef.current) {
       playerRef.current.position.copy(player.pos)
       playerRef.current.rotation.y = player.heading
       playerRef.current.visible = player.mode === 'foot'
     }
-    for (let i = 0; i < vehicles.length; i++) {
+    for (let i = 0; i < sim.vehicles.length; i++) {
       const g = vehicleRefs.current[i]
       if (!g) continue
-      g.position.copy(vehicles[i].pos)
-      g.rotation.y = vehicles[i].state.heading
+      const v = sim.vehicles[i]
+      g.position.set(v.pos.x, 0, v.pos.z)
+      g.rotation.y = v.state.heading
+      const sq = v.squash
+      g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
     }
 
-    // --- Publish stats (throttled) ---
-    acc.time += dt
-    acc.distance += movedThisFrame
-    if (currentSpeed > acc.topSpeed) acc.topSpeed = currentSpeed
-    acc.statTimer += dt
-    if (acc.statTimer >= SIM.statPublishInterval) {
-      acc.statTimer = 0
-      store.publishStats({
-        time: acc.time,
-        distance: acc.distance,
-        speed: currentSpeed,
-        topSpeed: acc.topSpeed,
-        vehiclesUsed: acc.vehiclesUsed,
-      })
+    // --- Commit police pool ---
+    for (let i = 0; i < sim.police.length; i++) {
+      const g = Registry.police[i]
+      if (!g) continue
+      const u = sim.police[i]
+      if (u.active) {
+        g.visible = true
+        g.position.set(u.pos.x, 0, u.pos.z)
+        g.rotation.y = u.state.heading
+      } else {
+        g.visible = false
+      }
+    }
+
+    // --- Commit helicopters (+ rotor spin) ---
+    for (let i = 0; i < sim.helis.length; i++) {
+      const g = Registry.helis[i]
+      if (!g) continue
+      const h = sim.helis[i]
+      if (h.active) {
+        g.visible = true
+        g.position.copy(h.pos)
+        g.rotation.y = h.heading
+        const rotor = Registry.heliRotors[i]
+        if (rotor) rotor.rotation.y += 40 * dt
+      } else {
+        g.visible = false
+      }
+    }
+
+    // --- Commit particles ---
+    const pm = Registry.particles
+    if (pm) {
+      for (let i = 0; i < sim.particles.length; i++) {
+        const p = sim.particles[i]
+        let s = 0
+        if (p.active) {
+          s =
+            p.kind === 'debris'
+              ? p.size * Math.min(1, p.life * 3)
+              : p.size * Math.max(0.05, p.life / p.maxLife)
+          pm.setColorAt(i, p.color)
+        }
+        tmpScale.set(s, s, s)
+        tmpM.compose(p.pos, IDENT_Q, tmpScale)
+        pm.setMatrixAt(i, tmpM)
+      }
+      pm.instanceMatrix.needsUpdate = true
+      if (pm.instanceColor) pm.instanceColor.needsUpdate = true
+    }
+
+    // --- Drain destroyed-prop hide queue ---
+    if (sim.hideQueue.length) {
+      const touched = new Set<THREE.InstancedMesh>()
+      for (const req of sim.hideQueue) {
+        const b = Registry.props[req.type]
+        if (b) {
+          b.setMatrixAt(req.index, ZERO)
+          touched.add(b)
+        }
+        const c = Registry.propsCap[req.type]
+        if (c) {
+          c.setMatrixAt(req.index, ZERO)
+          touched.add(c)
+        }
+      }
+      touched.forEach((m) => (m.instanceMatrix.needsUpdate = true))
+      sim.hideQueue.length = 0
+    }
+
+    // --- Reactive police class updates (only when a slot changes) ---
+    let classesChanged = false
+    for (let i = 0; i < sim.police.length; i++) {
+      const u = sim.police[i]
+      const desired = u.active ? u.classId : prevClasses.current[i]
+      if (desired !== prevClasses.current[i]) {
+        prevClasses.current[i] = desired
+        classesChanged = true
+      }
+    }
+    if (classesChanged) setPoliceClasses(prevClasses.current.slice())
+
+    // --- Bust check ---
+    if (sim.busted) {
+      publishStats(sim, peakHeat)
+      store.endRun()
+      Input.lateUpdate()
+      return
+    }
+
+    // --- Publish HUD stats (throttled) ---
+    sim.acc.statTimer += dt
+    if (sim.acc.statTimer >= SIM.statPublishInterval) {
+      sim.acc.statTimer = 0
+      publishStats(sim, peakHeat)
     }
 
     Input.lateUpdate()
@@ -219,12 +201,10 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
   return (
     <group>
-      {/* Player on-foot model */}
       <group ref={playerRef}>
         <VoxelCharacter def={character} />
       </group>
 
-      {/* Stealable vehicles */}
       {VEHICLE_SPAWNS.map((spawn, i) => (
         <group
           key={i}
@@ -239,4 +219,44 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       ))}
     </group>
   )
+}
+
+/** Mirrors throttled simulation stats into the game store for the HUD/UI. */
+function publishStats(
+  sim: ReturnType<typeof createSimState>,
+  peakHeat: { current: number },
+): void {
+  const level = Math.floor(sim.heat.progress)
+  if (level > peakHeat.current) peakHeat.current = level
+
+  const status =
+    sim.heat.spotted
+      ? 'spotted'
+      : sim.heat.hasLastKnown && sim.heat.searchTimer < HEAT.searchTimeout && level > 0
+        ? 'search'
+        : 'roam'
+
+  let policeCount = 0
+  for (const u of sim.police) if (u.active) policeCount++
+
+  const inVehicle = sim.player.mode === 'vehicle'
+  const v = inVehicle ? sim.vehicles[sim.player.vehicleIndex] : null
+
+  useGameStore.getState().publishStats({
+    time: sim.acc.time,
+    distance: sim.acc.distance,
+    speed: sim.playerSpeed,
+    topSpeed: sim.acc.topSpeed,
+    heat: level,
+    peakHeat: peakHeat.current,
+    vehiclesUsed: sim.acc.vehiclesUsed,
+    score: Math.round(sim.score.value),
+    status,
+    capture: sim.capture,
+    copsDestroyed: sim.score.cops,
+    nearMisses: sim.score.nearMisses,
+    policeCount,
+    vehicleName: v ? v.def.name : null,
+    vehicleHealth: v ? Math.max(0, v.health / v.def.durability) : 1,
+  })
 }

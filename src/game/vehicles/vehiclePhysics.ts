@@ -30,11 +30,13 @@ export function stepVehicle(
   input: DriveInput,
   def: VehicleDef,
   dt: number,
+  speedMult = 1,
 ): { dx: number; dz: number } {
-  const maxReverse = def.topSpeed * REVERSE_FRACTION
+  const topSpeed = def.topSpeed * speedMult
+  const maxReverse = topSpeed * REVERSE_FRACTION
 
   // Heavier vehicles accelerate slower.
-  const effectiveAccel = def.accel / Math.max(0.5, def.weight)
+  const effectiveAccel = (def.accel * speedMult) / Math.max(0.5, def.weight)
 
   if (input.throttle !== 0) {
     // Braking is stronger when throttle opposes current motion.
@@ -47,10 +49,10 @@ export function stepVehicle(
     if (Math.abs(state.speed) < 0.05) state.speed = 0
   }
 
-  state.speed = clamp(state.speed, -maxReverse, def.topSpeed)
+  state.speed = clamp(state.speed, -maxReverse, topSpeed)
 
   // Steering authority ramps up with speed, capped near low speed.
-  const speedFactor = clamp(state.speed / (def.topSpeed * 0.45), -1, 1)
+  const speedFactor = clamp(state.speed / (topSpeed * 0.45), -1, 1)
   state.heading += input.steer * def.handling * speedFactor * dt
 
   // Forward vector for rotation.y = heading is (sin h, 0, cos h).

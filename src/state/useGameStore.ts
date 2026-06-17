@@ -12,15 +12,14 @@ const emptyStats = (): RunStats => ({
   peakHeat: 0,
   vehiclesUsed: 0,
   score: 0,
+  status: 'roam',
+  capture: 0,
+  copsDestroyed: 0,
+  nearMisses: 0,
+  policeCount: 0,
+  vehicleName: null,
+  vehicleHealth: 1,
 })
-
-function computeScore(s: RunStats): number {
-  return Math.round(
-    s.time * SCORE.perSecond +
-      s.distance * SCORE.perDistanceUnit +
-      s.peakHeat * SCORE.peakHeatBonus,
-  )
-}
 
 interface GameStore {
   phase: GamePhase
@@ -59,8 +58,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({ stats: { ...state.stats, ...partial } })),
 
   endRun: () => {
-    const stats = { ...get().stats }
-    stats.score = computeScore(stats)
+    // Score is accumulated live by the simulation; finalise with the peak-heat
+    // bonus and lock it in.
+    const stats = { ...get().stats, capture: 1 }
+    stats.score = Math.round(stats.score + stats.peakHeat * SCORE.peakHeatBonus)
     useProgressionStore.getState().recordRun(stats)
     set({ phase: 'gameover', stats })
   },

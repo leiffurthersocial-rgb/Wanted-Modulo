@@ -7,6 +7,10 @@ import { useSettingsStore } from '@/state/useSettingsStore'
 import { City } from '@/game/world/City'
 import { Lighting } from '@/game/world/Lighting'
 import { Simulation } from '@/game/Simulation'
+import { PolicePool } from '@/game/entities/PolicePool'
+import { HeliPool } from '@/game/entities/HeliPool'
+import { ParticleField } from '@/game/entities/ParticleField'
+import { PropField } from '@/game/entities/PropField'
 
 /**
  * The R3F Canvas scene root. Stays mounted across play/pause so resuming is
@@ -25,16 +29,20 @@ export function Game() {
     <Canvas
       shadows={shadows}
       dpr={[1, 2]}
-      camera={{ position: [0, 9, -12], fov: 60, near: 0.1, far: 1000 }}
+      camera={{ position: [0, 9, -13], fov: 60, near: 0.1, far: 1000 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
     >
       <color attach="background" args={['#aac4e6']} />
-      <fog attach="fog" args={['#aac4e6', 70, 240]} />
+      <fog attach="fog" args={['#aac4e6', 70, 260]} />
       <Suspense fallback={null}>
         <Sky sunPosition={[60, 90, 40]} turbidity={6} rayleigh={1.2} />
         <Lighting />
         <City />
+        <PropField />
         <Simulation characterId={character} />
+        <PolicePool />
+        <HeliPool />
+        <ParticleField />
       </Suspense>
     </Canvas>
   )
