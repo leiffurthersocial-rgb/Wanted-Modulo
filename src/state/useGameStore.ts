@@ -21,11 +21,24 @@ const emptyStats = (): RunStats => ({
   vehicleHealth: 1,
 })
 
+export interface RadarBlip {
+  x: number
+  z: number
+}
+export interface RadarData {
+  px: number
+  pz: number
+  units: RadarBlip[]
+  helis: RadarBlip[]
+}
+
 interface GameStore {
   phase: GamePhase
   selectedCharacter: CharacterId
   stats: RunStats
+  radar: RadarData
 
+  setRadar: (radar: RadarData) => void
   setPhase: (phase: GamePhase) => void
   selectCharacter: (id: CharacterId) => void
   startRun: () => void
@@ -41,7 +54,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   phase: 'menu',
   selectedCharacter: 'robin',
   stats: emptyStats(),
+  radar: { px: 0, pz: 0, units: [], helis: [] },
 
+  setRadar: (radar) => set({ radar }),
   setPhase: (phase) => set({ phase }),
   selectCharacter: (id) => set({ selectedCharacter: id }),
 

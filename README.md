@@ -4,7 +4,15 @@
 
 A spiritual successor to *Smashy Road 2*, built to be deeper, more polished, and more replayable.
 
-**Status:** 🚧 In development — currently Phase 1 (Game Design Document).
+**Status:** ✅ Feature-complete (Phases 1–10). Survive the escalating chase across a districted voxel city with day/night, neon, weather, destruction, and a 0–10 pursuit heat system.
+
+## Run it
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build to dist/ (deploys on Vercel as-is)
+```
 
 ## Tech Stack
 

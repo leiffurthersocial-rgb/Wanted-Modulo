@@ -1,19 +1,22 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { BUILDING_PALETTE, getCity } from './cityModel'
+import { CITY } from '@/config/constants'
+import { ALL_COLORS, getCity } from './cityModel'
+import { getLightsTexture, getRoadTexture } from './textures'
+import { Registry } from '@/game/sim/registry'
 
 /**
- * Voxel city rendered as a single InstancedMesh for all buildings — one draw
- * call regardless of building count (the instanced-rendering perf technique).
- * Geometry comes from the shared city model so it matches collision/LOS.
+ * Districted voxel city. All buildings render in a single InstancedMesh (one
+ * draw call) with per-instance district colours and an emissive window texture
+ * whose intensity the day/night controller animates. Parks are grass quads.
  */
 export function City() {
   const meshRef = useRef<THREE.InstancedMesh>(null)
+  const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const city = useMemo(() => getCity(), [])
-  const colors = useMemo(
-    () => BUILDING_PALETTE.map((c) => new THREE.Color(c)),
-    [],
-  )
+  const colors = useMemo(() => ALL_COLORS.map((c) => new THREE.Color(c)), [])
+  const lights = useMemo(() => getLightsTexture(), [])
+  const road = useMemo(() => getRoadTexture(city.groundSize / city.pitch), [city])
 
   useLayoutEffect(() => {
     const mesh = meshRef.current
@@ -31,6 +34,10 @@ export function City() {
     })
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    Registry.cityMaterial = matRef.current
+    return () => {
+      Registry.cityMaterial = null
+    }
   }, [city, colors])
 
   return (
@@ -38,8 +45,16 @@ export function City() {
       {/* Ground / roads */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[city.groundSize, city.groundSize]} />
-        <meshStandardMaterial color="#1b1f2a" roughness={0.95} />
+        <meshStandardMaterial map={road} roughness={0.95} />
       </mesh>
+
+      {/* Parks */}
+      {city.parks.map((p, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[p.x, 0.02, p.z]} receiveShadow>
+          <planeGeometry args={[CITY.blockSize * 1.05, CITY.blockSize * 1.05]} />
+          <meshStandardMaterial color="#2f6b35" roughness={1} />
+        </mesh>
+      ))}
 
       {/* Buildings — one instanced draw call */}
       <instancedMesh
@@ -49,7 +64,14 @@ export function City() {
         receiveShadow
       >
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial roughness={0.7} metalness={0.05} />
+        <meshStandardMaterial
+          ref={matRef}
+          roughness={0.7}
+          metalness={0.05}
+          emissive="#ffcaa0"
+          emissiveMap={lights}
+          emissiveIntensity={0}
+        />
       </instancedMesh>
     </group>
   )

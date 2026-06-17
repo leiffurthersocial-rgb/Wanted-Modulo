@@ -4,8 +4,10 @@ import * as THREE from 'three'
 import type { CharacterId } from '@/types'
 import { CAMERA, HEAT, SIM } from '@/config/constants'
 import { Input } from '@/core/input/InputManager'
+import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
 import { useFleetStore } from '@/state/useFleetStore'
+import { useSettingsStore } from '@/state/useSettingsStore'
 import { CHARACTERS } from '@/game/characters/characterCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import type { PoliceClassId } from '@/game/vehicles/policeCatalog'
@@ -29,6 +31,9 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const vehicleRefs = useRef<(THREE.Group | null)[]>([])
   const lookTarget = useRef(new THREE.Vector3())
   const peakHeat = useRef(0)
+  const prevHeat = useRef(0)
+  const prevSpotted = useRef(false)
+  const prevHeli = useRef(false)
   const prevClasses = useRef<PoliceClassId[]>(useFleetStore.getState().policeClasses.slice())
 
   const sim = useMemo(() => createSimState(), [])
@@ -80,6 +85,15 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     lookTarget.current.y += (1.2 - lookTarget.current.y) * lookT
     lookTarget.current.z += (player.pos.z - lookTarget.current.z) * lookT
     camera.lookAt(lookTarget.current)
+
+    // --- Camera shake on impacts (gated by setting) ---
+    if (inVehicle && useSettingsStore.getState().cameraShake) {
+      const shake = sim.vehicles[player.vehicleIndex].squash
+      if (shake > 0.01) {
+        camera.position.x += (Math.random() - 0.5) * shake * 2.2
+        camera.position.y += (Math.random() - 0.5) * shake * 2.2
+      }
+    }
 
     // --- Commit player + world vehicles ---
     if (playerRef.current) {
@@ -182,16 +196,33 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     // --- Bust check ---
     if (sim.busted) {
       publishStats(sim, peakHeat)
+      Audio.cue('bust')
       store.endRun()
       Input.lateUpdate()
       return
     }
 
-    // --- Publish HUD stats (throttled) ---
+    // --- Publish HUD stats + audio (throttled) ---
     sim.acc.statTimer += dt
     if (sim.acc.statTimer >= SIM.statPublishInterval) {
       sim.acc.statTimer = 0
       publishStats(sim, peakHeat)
+
+      const level = Math.floor(sim.heat.progress)
+      let heliActive = false
+      for (const h of sim.helis) if (h.active) { heliActive = true; break }
+      Audio.update({
+        heat: level,
+        spotted: sim.heat.spotted,
+        speed: sim.playerSpeed,
+        inVehicle: player.mode === 'vehicle',
+      })
+      if (level > prevHeat.current) Audio.cue('heatUp')
+      prevHeat.current = level
+      if (prevSpotted.current && !sim.heat.spotted) Audio.cue('escape')
+      prevSpotted.current = sim.heat.spotted
+      if (heliActive && !prevHeli.current) Audio.cue('heli')
+      prevHeli.current = heliActive
     }
 
     Input.lateUpdate()
@@ -237,7 +268,15 @@ function publishStats(
         : 'roam'
 
   let policeCount = 0
-  for (const u of sim.police) if (u.active) policeCount++
+  const units: { x: number; z: number }[] = []
+  for (const u of sim.police) {
+    if (!u.active) continue
+    policeCount++
+    units.push({ x: u.pos.x, z: u.pos.z })
+  }
+  const helis: { x: number; z: number }[] = []
+  for (const h of sim.helis) if (h.active) helis.push({ x: h.pos.x, z: h.pos.z })
+  useGameStore.getState().setRadar({ px: sim.player.pos.x, pz: sim.player.pos.z, units, helis })
 
   const inVehicle = sim.player.mode === 'vehicle'
   const v = inVehicle ? sim.vehicles[sim.player.vehicleIndex] : null

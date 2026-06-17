@@ -18,6 +18,12 @@ export function MainMenu() {
         <button className="btn primary" onClick={() => setPhase('characterSelect')}>
           Play
         </button>
+        <button className="btn ghost" onClick={() => setPhase('statistics')}>
+          Statistics
+        </button>
+        <button className="btn ghost" onClick={() => setPhase('settings')}>
+          Settings
+        </button>
       </div>
 
       {totalRuns > 0 && (

@@ -4,6 +4,8 @@
 export type GamePhase =
   | 'menu'
   | 'characterSelect'
+  | 'settings'
+  | 'statistics'
   | 'playing'
   | 'paused'
   | 'gameover'

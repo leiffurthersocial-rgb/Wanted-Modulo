@@ -1,5 +1,6 @@
 import { useGameStore } from '@/state/useGameStore'
 import { HEAT_TABLE } from '@/game/sim/heatTable'
+import { Minimap } from './Minimap'
 
 function formatTime(t: number): string {
   const m = Math.floor(t / 60)
@@ -103,6 +104,8 @@ export function HUD() {
           🚓 {stats.copsDestroyed} · ✦ {stats.nearMisses}
         </div>
       </div>
+
+      <Minimap />
 
       <div className="hud-hint">WASD / Arrows · E steal / exit · ESC pause</div>
     </div>

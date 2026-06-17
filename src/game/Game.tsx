@@ -1,11 +1,13 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky } from '@react-three/drei'
 import { Input } from '@/core/input/InputManager'
+import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { City } from '@/game/world/City'
-import { Lighting } from '@/game/world/Lighting'
+import { Environment } from '@/game/world/Environment'
+import { Rain } from '@/game/world/Rain'
+import { PostFX } from '@/game/world/PostFX'
 import { Simulation } from '@/game/Simulation'
 import { PolicePool } from '@/game/entities/PolicePool'
 import { HeliPool } from '@/game/entities/HeliPool'
@@ -19,30 +21,56 @@ import { PropField } from '@/game/entities/PropField'
 export function Game() {
   const character = useGameStore((s) => s.selectedCharacter)
   const shadows = useSettingsStore((s) => s.shadows)
+  const graphics = useSettingsStore((s) => s.graphics)
+
+  const musicVolume = useSettingsStore((s) => s.musicVolume)
+  const effectsVolume = useSettingsStore((s) => s.effectsVolume)
 
   useEffect(() => {
     Input.attach()
-    return () => Input.detach()
+    Audio.setVolumes(musicVolume, effectsVolume)
+    Audio.start()
+    return () => {
+      Input.detach()
+      Audio.stop()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    Audio.setVolumes(musicVolume, effectsVolume)
+  }, [musicVolume, effectsVolume])
+
+  const dpr = useMemo<[number, number]>(() => {
+    switch (graphics) {
+      case 'low':
+        return [0.75, 1]
+      case 'medium':
+        return [1, 1.5]
+      default:
+        return [1, 2]
+    }
+  }, [graphics])
 
   return (
     <Canvas
       shadows={shadows}
-      dpr={[1, 2]}
+      dpr={dpr}
       camera={{ position: [0, 9, -13], fov: 60, near: 0.1, far: 1000 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      gl={{ antialias: graphics !== 'low', powerPreference: 'high-performance' }}
     >
       <color attach="background" args={['#aac4e6']} />
       <fog attach="fog" args={['#aac4e6', 70, 260]} />
       <Suspense fallback={null}>
-        <Sky sunPosition={[60, 90, 40]} turbidity={6} rayleigh={1.2} />
-        <Lighting />
+        <Environment />
         <City />
         <PropField />
         <Simulation characterId={character} />
         <PolicePool />
         <HeliPool />
         <ParticleField />
+        <Rain />
+        <PostFX />
       </Suspense>
     </Canvas>
   )

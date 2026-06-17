@@ -21,8 +21,10 @@ class InputManagerImpl {
   private bindings: Record<InputAction, string[]> = DEFAULT_BINDINGS
   private held = new Set<string>()
   private justPressed = new Set<string>()
-  /** Virtual (touch/UI) action overrides. */
+  /** Virtual (touch/UI) held actions. */
   private virtual = new Set<InputAction>()
+  /** Virtual one-shot taps (edge-triggered). */
+  private virtualPressed = new Set<InputAction>()
   private attached = false
 
   attach(): void {
@@ -56,8 +58,12 @@ class InputManagerImpl {
     return false
   }
 
-  /** True exactly once per physical press of the action (edge-triggered). */
+  /** True exactly once per press of the action (keyboard or virtual tap). */
   consumePressed(action: InputAction): boolean {
+    if (this.virtualPressed.has(action)) {
+      this.virtualPressed.delete(action)
+      return true
+    }
     for (const code of this.bindings[action]) {
       if (this.justPressed.has(code)) {
         this.justPressed.delete(code)
@@ -65,6 +71,11 @@ class InputManagerImpl {
       }
     }
     return false
+  }
+
+  /** Fire a one-shot action from touch/UI (e.g. the E button). */
+  virtualTap(action: InputAction): void {
+    this.virtualPressed.add(action)
   }
 
   /** Cheap movement read for the hot loop. */
@@ -86,6 +97,7 @@ class InputManagerImpl {
   /** Clear per-frame edge state. Call at the end of each tick. */
   lateUpdate(): void {
     this.justPressed.clear()
+    this.virtualPressed.clear()
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

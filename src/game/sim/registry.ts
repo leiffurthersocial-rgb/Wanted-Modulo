@@ -18,4 +18,6 @@ export const Registry = {
   particles: null as THREE.InstancedMesh | null,
   props: {} as Partial<Record<PropType, THREE.InstancedMesh | null>>,
   propsCap: {} as Partial<Record<PropType, THREE.InstancedMesh | null>>,
+  /** Building material — emissive (window glow) animated by day/night. */
+  cityMaterial: null as THREE.MeshStandardMaterial | null,
 }
