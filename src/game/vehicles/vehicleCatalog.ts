@@ -1,0 +1,95 @@
+import type { VehicleDef } from '@/types'
+
+/**
+ * Vehicle catalog. Each category has a deliberately distinct feel via the five
+ * stats (accel / topSpeed / weight / durability / handling). These numbers are
+ * the single source of truth consumed by the physics step.
+ */
+export const VEHICLES: Record<string, VehicleDef> = {
+  hatchback: {
+    id: 'hatchback',
+    name: 'Hatchback',
+    category: 'compact',
+    color: '#4fc3f7',
+    topSpeed: 22,
+    accel: 15,
+    handling: 2.7,
+    weight: 0.7,
+    durability: 60,
+    size: { length: 3.2, width: 1.7, height: 1.4 },
+  },
+  cruiser: {
+    id: 'cruiser',
+    name: 'Cruiser',
+    category: 'sedan',
+    color: '#e0e0e0',
+    topSpeed: 27,
+    accel: 13,
+    handling: 2.1,
+    weight: 1.0,
+    durability: 90,
+    size: { length: 4.0, width: 1.9, height: 1.45 },
+  },
+  ranger: {
+    id: 'ranger',
+    name: 'Ranger',
+    category: 'suv',
+    color: '#37474f',
+    topSpeed: 25,
+    accel: 10,
+    handling: 1.6,
+    weight: 1.6,
+    durability: 150,
+    size: { length: 4.3, width: 2.1, height: 1.85 },
+  },
+  viper: {
+    id: 'viper',
+    name: 'Viper',
+    category: 'sports',
+    color: '#ff5252',
+    topSpeed: 39,
+    accel: 21,
+    handling: 2.5,
+    weight: 0.8,
+    durability: 70,
+    size: { length: 4.1, width: 1.95, height: 1.15 },
+  },
+  hauler: {
+    id: 'hauler',
+    name: 'Hauler',
+    category: 'van',
+    color: '#cfd8dc',
+    topSpeed: 19,
+    accel: 8,
+    handling: 1.4,
+    weight: 1.8,
+    durability: 130,
+    size: { length: 4.6, width: 2.1, height: 2.0 },
+  },
+  workhorse: {
+    id: 'workhorse',
+    name: 'Workhorse',
+    category: 'pickup',
+    color: '#8d6e63',
+    topSpeed: 26,
+    accel: 13,
+    handling: 1.9,
+    weight: 1.4,
+    durability: 130,
+    size: { length: 4.5, width: 2.05, height: 1.7 },
+  },
+  brute: {
+    id: 'brute',
+    name: 'Brute',
+    category: 'muscle',
+    color: '#ffb300',
+    topSpeed: 35,
+    accel: 19,
+    handling: 2.0,
+    weight: 1.3,
+    durability: 110,
+    size: { length: 4.4, width: 2.0, height: 1.4 },
+  },
+}
+
+export const VEHICLE_IDS = Object.keys(VEHICLES)
