@@ -3,8 +3,8 @@ import * as THREE from 'three'
 import { getCity } from './cityModel'
 import { sampleHeight, urbanization } from './terrain'
 
-const GRASS = new THREE.Color('#3f6b3a')
-const ASPHALT = new THREE.Color('#2b303c')
+const GRASS = new THREE.Color('#5aa84a')
+const ASPHALT = new THREE.Color('#3c4250')
 const tmp = new THREE.Color()
 
 /**

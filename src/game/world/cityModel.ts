@@ -3,11 +3,12 @@ import { sampleHeight, urbanization } from './terrain'
 
 export type District = 'downtown' | 'midtown' | 'residential' | 'industrial'
 
+// Bright, stylized palette (Smashy/Crossy-style flat colour blocks).
 export const DISTRICT_PALETTE: Record<District, string[]> = {
-  downtown: ['#2b3a5c', '#34406b', '#3a4f7a', '#2f3e63', '#3d5688'],
-  midtown: ['#3a4763', '#46506b', '#54607f', '#4a5570', '#3d4a5f'],
-  residential: ['#6b5a4a', '#7a6450', '#5f5347', '#806a52', '#8a7a5a'],
-  industrial: ['#3a4048', '#454b4f', '#2f343a', '#52504a', '#5a4a3a'],
+  downtown: ['#5a8fd6', '#6aa0e0', '#4f86cf', '#7ab0ea', '#5577c4'],
+  midtown: ['#e0a85a', '#e6b96e', '#d99a6a', '#ecc878', '#d88f5a'],
+  residential: ['#e07a8a', '#7ec99a', '#e6c26e', '#88b8e0', '#d98fb0'],
+  industrial: ['#aab0bd', '#9aa0ad', '#b8bec8', '#8a90a0', '#c2c8d2'],
 }
 
 export const ALL_COLORS: string[] = [

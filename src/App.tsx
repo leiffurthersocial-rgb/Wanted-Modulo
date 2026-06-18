@@ -10,8 +10,6 @@ import { Statistics } from '@/ui/screens/Statistics'
 import { PauseMenu } from '@/ui/screens/PauseMenu'
 import { GameOver } from '@/ui/screens/GameOver'
 
-const IS_TOUCH = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
-
 /**
  * Phase router. A single `phase` enum decides which screen renders and whether
  * the 3D Canvas is mounted. The Canvas persists across play/pause so resuming
@@ -21,7 +19,9 @@ export default function App() {
   const phase = useGameStore((s) => s.phase)
   const mobileControls = useSettingsStore((s) => s.mobileControls)
   const inRun = phase === 'playing' || phase === 'paused'
-  const showTouch = inRun && (mobileControls || IS_TOUCH)
+  // Touch controls are opt-in via Settings (auto-detection wrongly triggered on
+  // touch-capable laptops/desktops).
+  const showTouch = inRun && mobileControls
 
   return (
     <>

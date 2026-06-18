@@ -70,9 +70,8 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
     const { player } = sim
 
-    // --- Chase camera (follows terrain height) ---
+    // --- Chase camera (follows terrain height; sim stays flat at y=0) ---
     const py = sampleHeight(player.pos.x, player.pos.z)
-    player.pos.y = py
     const inVehicle = player.mode === 'vehicle'
     const camHeading = inVehicle ? player.heading : 0
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
@@ -101,7 +100,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
     // --- Commit player + world vehicles ---
     if (playerRef.current) {
-      playerRef.current.position.copy(player.pos)
+      playerRef.current.position.set(player.pos.x, py, player.pos.z)
       playerRef.current.rotation.y = player.heading
       playerRef.current.visible = player.mode === 'foot'
     }

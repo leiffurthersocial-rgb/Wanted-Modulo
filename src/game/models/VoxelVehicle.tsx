@@ -30,7 +30,7 @@ export function VoxelVehicle({ def }: Props) {
       {/* Main body */}
       <mesh castShadow position={[0, bodyY, 0]}>
         <boxGeometry args={[W, bodyH, L]} />
-        <meshStandardMaterial color={def.color} metalness={0.2} roughness={0.55} />
+        <meshStandardMaterial color={def.color} metalness={0.0} roughness={0.6} flatShading />
       </mesh>
 
       {/* Cabin / roof */}

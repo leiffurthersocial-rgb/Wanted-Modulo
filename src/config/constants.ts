@@ -13,7 +13,7 @@ export const PLAYER = {
   /** How quickly the character rotates to face movement (per second). */
   turnLerp: 14,
   /** Radius within which the player can steal/enter a vehicle. */
-  enterRadius: 4.5,
+  enterRadius: 5.5,
   /** Spawn position. */
   spawn: [0, 0, 0] as [number, number, number],
 } as const

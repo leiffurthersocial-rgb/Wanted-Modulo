@@ -62,7 +62,6 @@ export function CharacterSelect() {
               >
                 <Portrait def={def} />
                 <div className="name">{def.name}</div>
-                <div className="desc">{def.description}</div>
               </div>
             )
           })}
