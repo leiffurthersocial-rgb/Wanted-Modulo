@@ -1,18 +1,13 @@
 /**
- * Procedural terrain, rivers and urbanization fields for an INFINITE world.
- * Every function here is a pure, deterministic function of world coordinates —
- * no bounds, no precomputed arrays — so the ground mesh, building streamer,
- * props, collision and entity height-following all agree on the shape of the
- * world no matter how far the player travels.
+ * Procedural terrain, rivers and bridges for an INFINITE, Smashy-Road-style
+ * world. The land is FLAT (height 0) everywhere except where straight,
+ * grid-aligned rivers carve channels below the water plane. Every function is a
+ * pure, deterministic function of world coordinates, so the floor mesh, the
+ * building streamer, props, collision and entity height-following all agree on
+ * the shape of the world no matter how far the player travels.
  */
 
 import { CITY_PITCH } from '@/config/constants'
-
-function hash(ix: number, iz: number, seed: number): number {
-  let h = (ix * 374761393 + iz * 668265263 + seed * 2654435761) | 0
-  h = (Math.imul(h ^ (h >>> 13), 1274126177)) | 0
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
 
 function smooth(t: number): number {
   return t * t * (3 - 2 * t)
@@ -20,6 +15,19 @@ function smooth(t: number): number {
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
+}
+
+function hash(ix: number, iz: number, seed: number): number {
+  let h = (ix * 374761393 + iz * 668265263 + seed * 2654435761) | 0
+  h = (Math.imul(h ^ (h >>> 13), 1274126177)) | 0
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+
+/** Deterministic 1-D hash (river-line presence/offset). */
+function hash1(i: number, seed: number): number {
+  let h = (i * 374761393 + seed * 2654435761) | 0
+  h = (Math.imul(h ^ (h >>> 13), 1274126177)) | 0
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
 function vnoise(x: number, z: number, seed: number): number {
@@ -40,41 +48,68 @@ function fbm(x: number, z: number, seed: number): number {
   return vnoise(x, z, seed) * 0.6 + vnoise(x * 2, z * 2, seed + 7) * 0.3 + vnoise(x * 4, z * 4, seed + 13) * 0.1
 }
 
-/** Surface height of the river water plane (world units). */
-export const WATER_Y = -1.7
-/** Maximum carve depth of a river channel below the plains. */
-const RIVER_DEPTH = 5.4
-/** Half-width of a river in noise-field units (controls how wide channels are). */
-const RIVER_HALF = 0.052
-
-/**
- * 0..1 "in a river" factor. 1 at the centerline, fading to 0 at the banks.
- * Rivers are ridges of a low-frequency field, so they meander naturally and
- * branch — a logical, organic water network rather than a grid of canals.
- */
-export function riverFactor(x: number, z: number): number {
-  const n = fbm(x * 0.0052 + 11, z * 0.0052 - 7, 31)
-  const d = Math.abs(n - 0.5)
-  if (d > RIVER_HALF) return 0
-  return smooth(1 - d / RIVER_HALF)
-}
-
 /** 0..1 city density. High = dense downtown, low = plains/countryside. */
 export function urbanization(x: number, z: number): number {
   return fbm(x * 0.0094, z * 0.0094, 1)
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Rivers — straight, grid-aligned bands with right-angle corners            */
+/* -------------------------------------------------------------------------- */
+
+export const WATER_Y = -1.7
+const RIVER_DEPTH = 5
+/** Spacing of the river lattice (world units). */
+const RIVER_GRID = 150
+/** Half-width of a river channel. */
+const RIVER_HALFW = 7
+/** Probability a lattice line carries a river. */
+const RIVER_P = 0.24
+/** Keep the spawn plaza dry. */
+const SPAWN_CLEAR = CITY_PITCH * 1.5
+
+function colActive(i: number): boolean {
+  return hash1(i, 7) < RIVER_P
+}
+function colCenter(i: number): number {
+  return i * RIVER_GRID + (hash1(i, 9) - 0.5) * RIVER_GRID * 0.34
+}
+function rowActive(j: number): boolean {
+  return hash1(j, 17) < RIVER_P
+}
+function rowCenter(j: number): number {
+  return j * RIVER_GRID + (hash1(j, 19) - 0.5) * RIVER_GRID * 0.34
+}
+
 /**
- * Terrain height in world units. Plains sit near 0 so streets read flat; gentle
- * hills rise in the low-urban countryside; rivers carve channels below the
- * water plane. Everything is continuous so vehicles and the camera glide.
+ * 0..1 "in a river" factor — 1 at the centerline, fading to 0 at the banks.
+ * Rivers run dead-straight along the lattice in both axes; where a vertical and
+ * horizontal river meet they simply cross, giving clean right-angle corners.
  */
+export function riverFactor(x: number, z: number): number {
+  if (Math.abs(x) < SPAWN_CLEAR && Math.abs(z) < SPAWN_CLEAR) return 0
+  let f = 0
+  const ci = Math.round(x / RIVER_GRID)
+  for (let di = -1; di <= 1; di++) {
+    const i = ci + di
+    if (!colActive(i)) continue
+    const d = Math.abs(x - colCenter(i))
+    if (d < RIVER_HALFW) f = Math.max(f, 1 - d / RIVER_HALFW)
+  }
+  const cj = Math.round(z / RIVER_GRID)
+  for (let dj = -1; dj <= 1; dj++) {
+    const j = cj + dj
+    if (!rowActive(j)) continue
+    const d = Math.abs(z - rowCenter(j))
+    if (d < RIVER_HALFW) f = Math.max(f, 1 - d / RIVER_HALFW)
+  }
+  return f
+}
+
+/** Terrain height: a flat world, carved only by rivers. */
 export function sampleHeight(x: number, z: number): number {
-  const u = urbanization(x, z)
-  const e = fbm(x * 0.0072 + 50, z * 0.0072 + 50, 2)
-  const hills = e * e * 22 * (1 - 0.7 * u)
-  const river = riverFactor(x, z)
-  return hills * (1 - river) - river * RIVER_DEPTH
+  const r = riverFactor(x, z)
+  return r > 0 ? -RIVER_DEPTH * smooth(r) : 0
 }
 
 /** True where the terrain dips below the water plane (a navigable river). */
@@ -89,60 +124,74 @@ export function waterDepth(x: number, z: number): number {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Roads & bridges                                                            */
+/*  Bridges — sparse wooden crossings over the straight rivers                 */
 /* -------------------------------------------------------------------------- */
 
-/** Half-width (world units) of a drivable road corridor / bridge deck. */
-const ROAD_HALF = 5
-/** Bridge deck height — sits just above the plains so approaches are seamless. */
-export const BRIDGE_Y = 0.3
+export const BRIDGE_Y = 0.35
+/** Spacing of candidate bridge slots along a river. */
+const BRIDGE_SPACING = 165
+/** Probability a candidate slot actually has a bridge (keeps them rare). */
+const BRIDGE_P = 0.5
+/** Half-length of a bridge deck along the river. */
+const BRIDGE_HALF = 4.5
+/** Extra deck reach onto each bank. */
+const BRIDGE_APPROACH = 4
 
-/** Only every Nth road carries a bridge, so crossings stay rare and special. */
-const BRIDGE_EVERY = 4
-
-/** Index of the nearest road centerline running along Z (vertical road). */
-function roadIndexX(x: number): number {
-  return Math.round(x / CITY_PITCH - 0.5)
+/** Internal: does a bridge span the vertical river at column i here? */
+function bridgeOnColumn(x: number, z: number): boolean {
+  const ci = Math.round(x / RIVER_GRID)
+  for (let di = -1; di <= 1; di++) {
+    const i = ci + di
+    if (!colActive(i)) continue
+    if (Math.abs(x - colCenter(i)) > RIVER_HALFW + BRIDGE_APPROACH) continue
+    const k = Math.round(z / BRIDGE_SPACING)
+    if (hash(i, k, 31) < BRIDGE_P && Math.abs(z - k * BRIDGE_SPACING) < BRIDGE_HALF) return true
+  }
+  return false
 }
 
-/** Index of the nearest road centerline running along X (horizontal road). */
-function roadIndexZ(z: number): number {
-  return Math.round(z / CITY_PITCH - 0.5)
+/** Internal: does a bridge span the horizontal river at row j here? */
+function bridgeOnRow(x: number, z: number): boolean {
+  const cj = Math.round(z / RIVER_GRID)
+  for (let dj = -1; dj <= 1; dj++) {
+    const j = cj + dj
+    if (!rowActive(j)) continue
+    if (Math.abs(z - rowCenter(j)) > RIVER_HALFW + BRIDGE_APPROACH) continue
+    const k = Math.round(x / BRIDGE_SPACING)
+    if (hash(j, k, 41) < BRIDGE_P && Math.abs(x - k * BRIDGE_SPACING) < BRIDGE_HALF) return true
+  }
+  return false
 }
 
-function distRoadX(x: number): number {
-  return Math.abs(x - (roadIndexX(x) + 0.5) * CITY_PITCH)
-}
-
-function distRoadZ(z: number): number {
-  return Math.abs(z - (roadIndexZ(z) + 0.5) * CITY_PITCH)
-}
-
-/**
- * True where a *major* road corridor crosses a river — i.e. where a drivable
- * bridge deck spans the water. Only every Nth road is a major (bridged) road,
- * so rivers stay meaningful obstacles and bridges read as landmarks.
- * Deterministic, so renderer, collision and height query all agree.
- */
+/** True where a sparse wooden bridge deck spans a river — the drivable surface
+ *  here is the deck, so cars roll across instead of plunging into the water. */
 export function isBridge(x: number, z: number): boolean {
-  if (riverFactor(x, z) <= 0.06) return false
-  const onMajorX = distRoadX(x) < ROAD_HALF && ((roadIndexX(x) % BRIDGE_EVERY) + BRIDGE_EVERY) % BRIDGE_EVERY === 0
-  const onMajorZ = distRoadZ(z) < ROAD_HALF && ((roadIndexZ(z) % BRIDGE_EVERY) + BRIDGE_EVERY) % BRIDGE_EVERY === 0
-  return onMajorX || onMajorZ
+  return bridgeOnColumn(x, z) || bridgeOnRow(x, z)
 }
 
-/** True when the bridge here runs along Z (a vertical road) — its railings sit
- *  on the X edges. Used by the bridge renderer to place side posts only. */
-export function bridgeRunsAlongZ(x: number, z: number): boolean {
-  return distRoadX(x) <= distRoadZ(z)
+/** A vertical-river bridge's deck runs along X (you drive across in X). Used by
+ *  the renderer to orient planks and rails. */
+export function bridgeAlongX(x: number, z: number): boolean {
+  return bridgeOnColumn(x, z)
 }
 
-/**
- * The drivable surface height at a point: the bridge deck where one spans a
- * river, otherwise the terrain. Vehicles, the player and the camera follow
- * this so cars roll straight across bridges instead of plunging into the river.
- */
+/** The drivable surface height: the bridge deck where one spans a river,
+ *  otherwise the (flat or river-carved) terrain. */
 export function surfaceHeight(x: number, z: number): number {
   if (isBridge(x, z)) return BRIDGE_Y
   return sampleHeight(x, z)
+}
+
+/**
+ * Nearest direction from a bank point toward open water within `reach`, as a
+ * unit vector, or null if no water is close. Used to place jump ramps facing
+ * the river. Checks the 4 axis directions (rivers are axis-aligned).
+ */
+export function waterDirection(x: number, z: number, reach: number): [number, number] | null {
+  if (isWater(x, z)) return null
+  if (isWater(x + reach, z)) return [1, 0]
+  if (isWater(x - reach, z)) return [-1, 0]
+  if (isWater(x, z + reach)) return [0, 1]
+  if (isWater(x, z - reach)) return [0, -1]
+  return null
 }

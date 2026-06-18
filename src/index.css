@@ -314,7 +314,7 @@ canvas {
 .heat {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 5px;
 }
 
@@ -479,10 +479,18 @@ canvas {
   width: 150px;
   height: 150px;
   border-radius: 24px;
-  background: radial-gradient(circle, #eaf6ff, #cfe9ff);
+  background: #7fc25f;
   border: 4px solid #ffffff;
   overflow: hidden;
   box-shadow: 0 6px 0 var(--edge-soft);
+}
+
+.minimap-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
 .blip {

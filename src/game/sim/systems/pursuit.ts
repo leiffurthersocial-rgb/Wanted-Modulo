@@ -102,16 +102,28 @@ function activate(
   u.nearMissArmed = true
 }
 
-/** Finds a spawn point near the player that isn't inside a building. */
+/**
+ * Finds a spawn point near the player that isn't inside a building or river —
+ * biased to the rear arc (behind the player's travel/facing direction) so units
+ * never pop into view right in front of the player.
+ */
 function findSpawnPoint(state: SimState, radius: number): [number, number] {
   const p = state.player.pos
-  for (let k = 0; k < 6; k++) {
-    const a = state.rand() * Math.PI * 2
-    const x = p.x + Math.cos(a) * radius
-    const z = p.z + Math.sin(a) * radius
+  // Facing direction (travel if moving, else where the player looks).
+  let fx = state.playerVel.x
+  let fz = state.playerVel.z
+  if (Math.hypot(fx, fz) < 1) {
+    fx = Math.sin(state.player.heading)
+    fz = Math.cos(state.player.heading)
+  }
+  const behind = Math.atan2(fx, fz) + Math.PI
+  for (let k = 0; k < 8; k++) {
+    const a = behind + (state.rand() - 0.5) * 1.7 // ~±49° rear arc
+    const x = p.x + Math.sin(a) * radius
+    const z = p.z + Math.cos(a) * radius
     if (!buildingCollision(x, z, 2.5).hit && !isWater(x, z)) return [x, z]
   }
-  return [p.x + radius, p.z]
+  return [p.x - Math.sin(Math.atan2(fx, fz)) * radius, p.z - Math.cos(Math.atan2(fx, fz)) * radius]
 }
 
 function deployRoadblock(state: SimState, tier: HeatTier): void {

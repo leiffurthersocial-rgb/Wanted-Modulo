@@ -45,16 +45,20 @@ export function PropField() {
       const tdef = PROP_TYPES[prop.type]
       const by = sampleHeight(prop.x, prop.z)
       q.setFromAxisAngle(yAxis, prop.rot)
+      const sin = Math.sin(prop.rot)
+      const cos = Math.cos(prop.rot)
       const body = bodyRefs.current[prop.type]
       if (body) {
-        pos.set(prop.x, by + tdef.body.y, prop.z)
+        const oz = tdef.body.z ?? 0
+        pos.set(prop.x + sin * oz, by + tdef.body.y, prop.z + cos * oz)
         m.compose(pos, q, scl)
         body.setMatrixAt(prop.typeIndex, m)
       }
       if (tdef.cap) {
         const cap = capRefs.current[prop.type]
         if (cap) {
-          pos.set(prop.x, by + tdef.cap.y, prop.z)
+          const oz = tdef.cap.z ?? 0
+          pos.set(prop.x + sin * oz, by + tdef.cap.y, prop.z + cos * oz)
           m.compose(pos, q, scl)
           cap.setMatrixAt(prop.typeIndex, m)
         }

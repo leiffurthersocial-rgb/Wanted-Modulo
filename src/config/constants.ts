@@ -151,10 +151,10 @@ export const PARTICLES = {
 
 export const PROPS = {
   /** Approximate spacing of the candidate scatter grid. */
-  spacing: 8,
-  /** Probability a free candidate point becomes a prop. */
-  density: 0.5,
-  max: 1400,
+  spacing: 9,
+  /** Probability a free candidate point becomes a prop (kept sparse). */
+  density: 0.24,
+  max: 760,
   /** Player speed needed to smash a prop. */
   smashSpeed: 5,
   /** Speed lost when plowing through a prop, scaled by mass. */

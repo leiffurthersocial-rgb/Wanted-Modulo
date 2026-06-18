@@ -1,20 +1,19 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { isBridge, bridgeRunsAlongZ, BRIDGE_Y } from './terrain'
+import { isBridge, bridgeAlongX, BRIDGE_Y } from './terrain'
 import { worldToCell } from './cityModel'
 import { useGameStore } from '@/state/useGameStore'
 
-const TILE = 2.6
+const TILE = 2.4
 const RADIUS = 150
-const DECK_CAP = 2600
-const POST_CAP = 1600
+const DECK_CAP = 1800
+const POST_CAP = 1400
 
 /**
- * Streaming bridge decks: where a road corridor crosses a river, a flat voxel
- * deck (with chunky side posts) is laid so cars can drive straight across. Like
- * the city, the deck/post instances refill whenever the player crosses a grid
- * cell, keeping it consistent across the infinite world. Decks are cosmetic —
+ * Streaming WOODEN bridges: where a sparse crossing spans a river, a plank deck
+ * with chunky side rails is laid so cars drive straight across. Deck/rail
+ * instances refill whenever the player crosses a grid cell. Decks are cosmetic —
  * the drivable surface comes from terrain.surfaceHeight().
  */
 export function Bridges() {
@@ -42,15 +41,16 @@ export function Bridges() {
         if (dx * dx + dz * dz > RADIUS * RADIUS) continue
         if (!isBridge(x, z)) continue
         if (d < DECK_CAP) {
-          pos.set(x, BRIDGE_Y - 0.25, z)
+          pos.set(x, BRIDGE_Y - 0.2, z)
           m.compose(pos, q, scl)
           deck.setMatrixAt(d++, m)
         }
-        // Chunky safety posts along the lateral edges (never across the entrance).
-        const alongZ = bridgeRunsAlongZ(x, z)
-        const edge = alongZ
-          ? !isBridge(x + TILE, z) || !isBridge(x - TILE, z)
-          : !isBridge(x, z + TILE) || !isBridge(x, z - TILE)
+        // Side rails run parallel to the driving direction (along the deck's
+        // long axis), never across the entrance.
+        const alongX = bridgeAlongX(x, z)
+        const edge = alongX
+          ? !isBridge(x, z + TILE) || !isBridge(x, z - TILE)
+          : !isBridge(x + TILE, z) || !isBridge(x - TILE, z)
         if (edge && p < POST_CAP) {
           pos.set(x, BRIDGE_Y + 0.45, z)
           m.compose(pos, q, scl)
@@ -83,12 +83,12 @@ export function Bridges() {
   return (
     <group>
       <instancedMesh ref={deckRef} args={[undefined, undefined, DECK_CAP]} receiveShadow castShadow frustumCulled={false}>
-        <boxGeometry args={[TILE, 0.5, TILE]} />
-        <meshStandardMaterial color="#c2c7d2" roughness={0.9} />
+        <boxGeometry args={[TILE + 0.05, 0.4, TILE + 0.05]} />
+        <meshStandardMaterial color="#9c6b3f" roughness={0.95} />
       </instancedMesh>
       <instancedMesh ref={postRef} args={[undefined, undefined, POST_CAP]} castShadow frustumCulled={false}>
-        <boxGeometry args={[0.5, 1.4, 0.5]} />
-        <meshStandardMaterial color="#e8a83a" roughness={0.7} />
+        <boxGeometry args={[0.4, 1.2, 0.4]} />
+        <meshStandardMaterial color="#6f4a28" roughness={0.95} />
       </instancedMesh>
     </group>
   )

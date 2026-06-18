@@ -47,21 +47,23 @@ export function HUD() {
   return (
     <div className="hud">
       <div className="hud-top">
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <div className="hud-stat">
-            <div className="label">Time</div>
-            <div className="value">{formatTime(stats.time)}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div className="hud-stat">
+              <div className="label">Time</div>
+              <div className="value">{formatTime(stats.time)}</div>
+            </div>
+            <div className="hud-stat">
+              <div className="label">Score</div>
+              <div className="value">{stats.score.toLocaleString()}</div>
+            </div>
+            <div className="hud-stat">
+              <div className="label">Speed</div>
+              <div className="value">{speedReadout}</div>
+            </div>
           </div>
-          <div className="hud-stat">
-            <div className="label">Score</div>
-            <div className="value">{stats.score.toLocaleString()}</div>
-          </div>
-          <div className="hud-stat">
-            <div className="label">Speed</div>
-            <div className="value">{speedReadout}</div>
-          </div>
+          <HeatMeter heat={stats.heat} />
         </div>
-        <HeatMeter heat={stats.heat} />
       </div>
 
       <div className="hud-center">
@@ -99,9 +101,6 @@ export function HUD() {
           ) : (
             <div className="label">On Foot — find a vehicle (E)</div>
           )}
-        </div>
-        <div className="hud-tally">
-          🚓 {stats.copsDestroyed} · ✦ {stats.nearMisses}
         </div>
       </div>
 

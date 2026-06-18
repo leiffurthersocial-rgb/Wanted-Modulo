@@ -12,6 +12,8 @@ export interface PropPart {
   size: [number, number, number]
   /** Vertical centre offset (origin sits on the ground). */
   y: number
+  /** Optional local +Z (forward) offset, rotated by the prop's heading. */
+  z?: number
   color: string
   emissive?: string
 }
@@ -96,11 +98,12 @@ export const PROP_TYPES: Record<PropType, PropTypeDef> = {
     weight: 1.0,
   },
   ramp: {
-    // Stacked voxel wedge — a stunt ramp that launches cars at speed.
-    body: { size: [4.4, 0.6, 3.2], y: 0.3, color: '#f2c14e' },
-    cap: { size: [4.4, 0.6, 1.6], y: 0.9, color: '#e8a83a' },
+    // Stepped voxel wedge rising toward +Z — a stunt ramp that launches cars at
+    // speed. Placed on riverbanks facing the water (see propModel).
+    body: { size: [4.2, 0.5, 3.4], y: 0.25, color: '#f2c14e' },
+    cap: { size: [4.2, 0.5, 1.5], y: 0.72, z: 0.85, color: '#e8a83a' },
     type: 'ramp',
-    radius: 2.2,
+    radius: 2.4,
     debrisColor: '#f2c14e',
     debrisCount: 0,
     weight: 0.5,

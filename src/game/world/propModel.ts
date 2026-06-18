@@ -1,6 +1,6 @@
 import { CITY_PITCH, PROPS } from '@/config/constants'
 import { buildingAtCell, mulberry32, worldToCell } from './cityModel'
-import { isWater, riverFactor } from './terrain'
+import { isWater, riverFactor, waterDirection } from './terrain'
 import { PROP_TYPES, PROP_TYPE_LIST, type PropType } from './propCatalog'
 
 export interface PropInstance {
@@ -43,15 +43,18 @@ function insideBuildingCell(x: number, z: number): boolean {
   return false
 }
 
+/** Destructible (non-ramp) types — ramps are placed only on riverbanks. */
+const DESTRUCTIBLE = PROP_TYPE_LIST.filter((t) => !PROP_TYPES[t].launch)
+
 function pickType(r: number): PropType {
   let total = 0
-  for (const t of PROP_TYPE_LIST) total += PROP_TYPES[t].weight
+  for (const t of DESTRUCTIBLE) total += PROP_TYPES[t].weight
   let acc = r * total
-  for (const t of PROP_TYPE_LIST) {
+  for (const t of DESTRUCTIBLE) {
     acc -= PROP_TYPES[t].weight
     if (acc <= 0) return t
   }
-  return PROP_TYPE_LIST[0]
+  return DESTRUCTIBLE[0]
 }
 
 /** Per-type instanced capacity (fixed so meshes never resize). */
@@ -115,6 +118,30 @@ export function ensurePropWindow(px: number, pz: number): boolean {
       const type = pickType(rand())
       if (counts[type] >= PROP_CAPACITY) continue
       props.push({ type, x: jx, z: jz, rot: rand() * Math.PI * 2, typeIndex: counts[type]++ })
+    }
+  }
+
+  // --- Ramps: placed on riverbanks, facing the water, in modest numbers so the
+  //     player can launch across rivers where there's no bridge. ---
+  const RAMP_SPACING = 11
+  const rsX = Math.floor(minX / RAMP_SPACING) * RAMP_SPACING
+  const rsZ = Math.floor(minZ / RAMP_SPACING) * RAMP_SPACING
+  for (let x = rsX; x <= maxX; x += RAMP_SPACING) {
+    for (let z = rsZ; z <= maxZ; z += RAMP_SPACING) {
+      const dx = x - px
+      const dz = z - pz
+      if (dx * dx + dz * dz > r2) continue
+      if (counts.ramp >= PROP_CAPACITY) continue
+      const dir = waterDirection(x, z, 7)
+      if (!dir) continue
+      // Sit a few units back from the bank so there's a run-up onto the ramp.
+      const bx = x - dir[0] * 5
+      const bz = z - dir[1] * 5
+      if (isWater(bx, bz) || insideBuildingCell(bx, bz)) continue
+      const rand = mulberry32(((bx * 19349663) ^ (bz * 83492791)) | 0)
+      if (rand() > 0.5) continue // ~half the eligible bank slots
+      const rot = Math.atan2(dir[0], dir[1]) // face the water
+      props.push({ type: 'ramp', x: bx, z: bz, rot, typeIndex: counts.ramp++ })
     }
   }
 
