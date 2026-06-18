@@ -3,6 +3,7 @@ import { angleDelta, clamp } from '@/core/math/angles'
 import { POLICE_CLASSES, type PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision, losBlocked } from '@/game/sim/los'
+import { sampleHeight } from '@/game/world/terrain'
 import { tierFor, type HeatTier } from '@/game/sim/heatTable'
 import { damageTier, type PoliceUnit, type SimState } from '@/game/sim/state'
 import { damageWorldVehicle } from './destruction'
@@ -211,7 +212,7 @@ function damagePolice(state: SimState, u: PoliceUnit, amount: number): void {
   u.health -= amount
   if (u.health <= 0) {
     u.active = false
-    spawnExplosion(state, u.pos.x, u.pos.y + 0.6, u.pos.z)
+    spawnExplosion(state, u.pos.x, sampleHeight(u.pos.x, u.pos.z) + 0.6, u.pos.z)
     state.score.cops++
     state.score.value += SCORE.copDestroyed
   }
@@ -325,8 +326,9 @@ export function updatePolice(state: SimState, dt: number, level: number): void {
       u.smokeTimer -= dt
       if (u.smokeTimer <= 0) {
         u.smokeTimer = dt2 === 'onfire' ? 0.08 : 0.16
-        emitSmoke(state, u.pos.x, u.pos.y + u.def.size.height * 0.7, u.pos.z)
-        if (dt2 === 'onfire') emitFire(state, u.pos.x, u.pos.y + 0.5, u.pos.z)
+        const by = sampleHeight(u.pos.x, u.pos.z)
+        emitSmoke(state, u.pos.x, by + u.def.size.height * 0.7, u.pos.z)
+        if (dt2 === 'onfire') emitFire(state, u.pos.x, by + 0.5, u.pos.z)
       }
     }
   }
@@ -362,7 +364,7 @@ export function updateHelis(state: SimState, dt: number): void {
       h.strikeFuse -= dt
       if (h.strikeFuse <= 0) {
         h.strikeFuse = -1
-        spawnExplosion(state, h.strikeX, 0.6, h.strikeZ)
+        spawnExplosion(state, h.strikeX, sampleHeight(h.strikeX, h.strikeZ) + 0.6, h.strikeZ)
         const d = Math.hypot(p.pos.x - h.strikeX, p.pos.z - h.strikeZ)
         if (d < 6 && p.mode === 'vehicle') {
           damageWorldVehicle(state, state.vehicles[p.vehicleIndex], 60)

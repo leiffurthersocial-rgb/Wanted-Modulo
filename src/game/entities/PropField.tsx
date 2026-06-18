@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { getProps } from '@/game/world/propModel'
+import { sampleHeight } from '@/game/world/terrain'
 import { PROP_TYPES, PROP_TYPE_LIST, type PropType } from '@/game/world/propCatalog'
 import { Registry } from '@/game/sim/registry'
 
@@ -23,17 +24,18 @@ export function PropField() {
 
     for (const prop of props) {
       const tdef = PROP_TYPES[prop.type]
+      const by = sampleHeight(prop.x, prop.z)
       q.setFromAxisAngle(yAxis, prop.rot)
       const body = bodyRefs.current[prop.type]
       if (body) {
-        pos.set(prop.x, tdef.body.y, prop.z)
+        pos.set(prop.x, by + tdef.body.y, prop.z)
         m.compose(pos, q, scl)
         body.setMatrixAt(prop.typeIndex, m)
       }
       if (tdef.cap) {
         const cap = capRefs.current[prop.type]
         if (cap) {
-          pos.set(prop.x, tdef.cap.y, prop.z)
+          pos.set(prop.x, by + tdef.cap.y, prop.z)
           m.compose(pos, q, scl)
           cap.setMatrixAt(prop.typeIndex, m)
         }

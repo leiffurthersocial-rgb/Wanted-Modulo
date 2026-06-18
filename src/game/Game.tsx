@@ -5,8 +5,8 @@ import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { City } from '@/game/world/City'
+import { Ground } from '@/game/world/Ground'
 import { Environment } from '@/game/world/Environment'
-import { Rain } from '@/game/world/Rain'
 import { PostFX } from '@/game/world/PostFX'
 import { Simulation } from '@/game/Simulation'
 import { PolicePool } from '@/game/entities/PolicePool'
@@ -60,16 +60,16 @@ export function Game() {
       gl={{ antialias: graphics !== 'low', powerPreference: 'high-performance' }}
     >
       <color attach="background" args={['#aac4e6']} />
-      <fog attach="fog" args={['#aac4e6', 70, 260]} />
+      <fog attach="fog" args={['#aac4e6', 110, 380]} />
       <Suspense fallback={null}>
         <Environment />
+        <Ground />
         <City />
         <PropField />
         <Simulation characterId={character} />
         <PolicePool />
         <HeliPool />
         <ParticleField />
-        <Rain />
         <PostFX />
       </Suspense>
     </Canvas>

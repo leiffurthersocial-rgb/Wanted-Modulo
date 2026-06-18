@@ -1,4 +1,5 @@
 import { CITY, CITY_PITCH } from '@/config/constants'
+import { sampleHeight, urbanization } from './terrain'
 
 export type District = 'downtown' | 'midtown' | 'residential' | 'industrial'
 
@@ -9,7 +10,6 @@ export const DISTRICT_PALETTE: Record<District, string[]> = {
   industrial: ['#3a4048', '#454b4f', '#2f343a', '#52504a', '#5a4a3a'],
 }
 
-/** Flat list of every palette colour, with an offset per district for indexing. */
 export const ALL_COLORS: string[] = [
   ...DISTRICT_PALETTE.downtown,
   ...DISTRICT_PALETTE.midtown,
@@ -29,6 +29,8 @@ export interface Building {
   w: number
   d: number
   h: number
+  /** Terrain height the building sits on. */
+  baseY: number
   colorIndex: number
   district: District
 }
@@ -36,8 +38,6 @@ export interface Building {
 export interface CityModel {
   buildings: Building[]
   occupied: Set<number>
-  /** Cells left as green parks (rendered as grass + extra trees). */
-  parks: { x: number; z: number }[]
   cols: number
   half: number
   pitch: number
@@ -55,21 +55,13 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-function districtAt(i: number, j: number, half: number): District {
-  // Chebyshev distance from centre, normalised 0..1.
-  const d = Math.max(Math.abs(i - half), Math.abs(j - half)) / half
-  if (d < 0.3) return 'downtown'
-  if (d < 0.6) return 'midtown'
-  if (d < 0.8) return 'residential'
-  return 'industrial'
-}
-
 let cached: CityModel | null = null
 
 /**
- * Generates the districted voxel city. Building height, footprint and colour
- * vary by district (downtown towers -> industrial sheds), and some cells become
- * parks. The same model feeds renderer, collision and AI line-of-sight.
+ * Noise-driven districted city. Building presence, height and palette follow an
+ * "urbanization" field: dense downtown cores fade out through midtown and
+ * residential into open plains (no buildings). Each building sits on the terrain
+ * height so the world has real verticality. Shared by renderer, collision & AI.
  */
 export function getCity(seed = 1337): CityModel {
   if (cached) return cached
@@ -79,7 +71,6 @@ export function getCity(seed = 1337): CityModel {
   const half = (n - 1) / 2
   const buildings: Building[] = []
   const occupied = new Set<number>()
-  const parks: { x: number; z: number }[] = []
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
@@ -87,36 +78,29 @@ export function getCity(seed = 1337): CityModel {
       const z = (j - half) * CITY_PITCH
       if (Math.abs(x) < CITY_PITCH && Math.abs(z) < CITY_PITCH) continue // spawn area
 
-      const district = districtAt(i, j, half)
-      const parkChance = district === 'residential' ? 0.2 : district === 'industrial' ? 0.14 : 0.08
-      if (rand() < parkChance) {
-        parks.push({ x, z })
-        continue
-      }
+      const u = urbanization(x, z)
+      if (u < 0.3) continue // plains — no building
 
+      let district: District
       let footprint: number
       let h: number
-      switch (district) {
-        case 'downtown':
-          footprint = CITY.blockSize * (0.74 + rand() * 0.2)
-          h = 18 + rand() * rand() * 40
-          break
-        case 'midtown':
-          footprint = CITY.blockSize * (0.7 + rand() * 0.26)
-          h = 8 + rand() * rand() * 24
-          break
-        case 'residential':
-          footprint = CITY.blockSize * (0.5 + rand() * 0.22)
-          h = 4 + rand() * 6
-          break
-        default: // industrial
-          footprint = CITY.blockSize * (0.84 + rand() * 0.14)
-          h = 5 + rand() * 11
+      if (u > 0.62) {
+        district = 'downtown'
+        footprint = CITY.blockSize * (0.74 + rand() * 0.2)
+        h = 16 + (u - 0.62) * 90 + rand() * rand() * 30
+      } else if (u > 0.46) {
+        district = 'midtown'
+        footprint = CITY.blockSize * (0.7 + rand() * 0.24)
+        h = 8 + rand() * rand() * 22
+      } else {
+        district = rand() < 0.5 ? 'residential' : 'industrial'
+        footprint = CITY.blockSize * (district === 'industrial' ? 0.84 : 0.52 + rand() * 0.22)
+        h = district === 'industrial' ? 5 + rand() * 10 : 4 + rand() * 6
       }
 
       const palette = DISTRICT_PALETTE[district]
       const colorIndex = DISTRICT_OFFSET[district] + ((rand() * palette.length) | 0)
-      buildings.push({ x, z, w: footprint, d: footprint, h, colorIndex, district })
+      buildings.push({ x, z, w: footprint, d: footprint, h, baseY: sampleHeight(x, z), colorIndex, district })
       occupied.add(i * n + j)
     }
   }
@@ -125,7 +109,6 @@ export function getCity(seed = 1337): CityModel {
   cached = {
     buildings,
     occupied,
-    parks,
     cols: n,
     half,
     pitch: CITY_PITCH,

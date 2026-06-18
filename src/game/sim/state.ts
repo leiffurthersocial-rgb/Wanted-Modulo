@@ -121,6 +121,8 @@ export interface SimState {
   spawnTimer: number
   roadblockTimer: number
   flashPhase: number
+  /** Monotonic explosion counter — drives the explosion SFX cue. */
+  explosions: number
   acc: {
     time: number
     distance: number
@@ -229,6 +231,7 @@ export function createSimState(): SimState {
     spawnTimer: 0,
     roadblockTimer: 6,
     flashPhase: 0,
+    explosions: 0,
     acc: { time: 0, distance: 0, topSpeed: 0, vehiclesUsed: 0, statTimer: 0 },
     rand: mulberry32((Math.random() * 1e9) | 0),
   }

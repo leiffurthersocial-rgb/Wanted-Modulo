@@ -44,10 +44,6 @@ export function Settings() {
           <Toggle value={s.postProcessing} onChange={(v) => s.set('postProcessing', v)} />
         </div>
         <div className="setting-row">
-          <span className="k">Weather (Rain)</span>
-          <Toggle value={s.weather} onChange={(v) => s.set('weather', v)} />
-        </div>
-        <div className="setting-row">
           <span className="k">Camera Shake</span>
           <Toggle value={s.cameraShake} onChange={(v) => s.set('cameraShake', v)} />
         </div>

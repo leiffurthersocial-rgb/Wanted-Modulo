@@ -28,8 +28,8 @@ export const CAMERA = {
 } as const
 
 export const CITY = {
-  /** Number of blocks per side. */
-  blocks: 12,
+  /** Number of blocks per side (large world). */
+  blocks: 24,
   /** Building footprint size. */
   blockSize: 14,
   /** Road width between blocks. */
@@ -138,10 +138,10 @@ export const PARTICLES = {
 
 export const PROPS = {
   /** Approximate spacing of the candidate scatter grid. */
-  spacing: 7,
+  spacing: 8,
   /** Probability a free candidate point becomes a prop. */
   density: 0.5,
-  max: 520,
+  max: 1400,
   /** Player speed needed to smash a prop. */
   smashSpeed: 5,
   /** Speed lost when plowing through a prop, scaled by mass. */

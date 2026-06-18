@@ -1,5 +1,6 @@
 import { DAMAGE, PROPS, SCORE } from '@/config/constants'
 import { PROP_TYPES } from '@/game/world/propCatalog'
+import { sampleHeight } from '@/game/world/terrain'
 import type { SimState, VehicleEntity } from '@/game/sim/state'
 import { damageTier } from '@/game/sim/state'
 import { emitFire, emitSmoke, spawnDebris, spawnExplosion } from './particles'
@@ -12,7 +13,7 @@ export function damageWorldVehicle(state: SimState, v: VehicleEntity, amount: nu
     v.health = 0
     v.wrecked = true
     v.state.speed = 0
-    spawnExplosion(state, v.pos.x, v.pos.y + 0.6, v.pos.z)
+    spawnExplosion(state, v.pos.x, sampleHeight(v.pos.x, v.pos.z) + 0.6, v.pos.z)
   }
 }
 
@@ -50,7 +51,7 @@ export function updatePropCollisions(state: SimState, _dt: number): void {
 
     prop.alive = false
     state.hideQueue.push({ type: prop.type, index: prop.typeIndex })
-    spawnDebris(state, prop.x, 0.4, prop.z, tdef.debrisColor, tdef.debrisCount)
+    spawnDebris(state, prop.x, sampleHeight(prop.x, prop.z) + 0.4, prop.z, tdef.debrisColor, tdef.debrisCount)
     // Heavier vehicles barely slow; light ones lose more speed.
     v.state.speed *= 1 - Math.min(0.5, PROPS.smashDrag / (v.def.weight * 40))
     state.score.value += SCORE.propDestroyed
@@ -61,7 +62,8 @@ export function updatePropCollisions(state: SimState, _dt: number): void {
 export function updateVehicleDamage(state: SimState, dt: number): void {
   for (const v of state.vehicles) {
     const tier = damageTier(v.health, v.def.durability)
-    const topY = v.pos.y + v.def.size.height * 0.7
+    const baseY = sampleHeight(v.pos.x, v.pos.z)
+    const topY = baseY + v.def.size.height * 0.7
 
     if (tier === 'smoking') {
       v.smokeTimer -= dt
@@ -73,7 +75,7 @@ export function updateVehicleDamage(state: SimState, dt: number): void {
       v.smokeTimer -= dt
       if (v.smokeTimer <= 0) {
         v.smokeTimer = 0.07
-        emitFire(state, v.pos.x, v.pos.y + 0.5, v.pos.z)
+        emitFire(state, v.pos.x, baseY + 0.5, v.pos.z)
         emitSmoke(state, v.pos.x, topY, v.pos.z)
       }
       damageWorldVehicle(state, v, DAMAGE.fireDps * dt)

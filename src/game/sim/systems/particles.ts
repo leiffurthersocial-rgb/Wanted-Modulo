@@ -60,31 +60,58 @@ export function emitFire(state: SimState, x: number, y: number, z: number): void
   p.color.setRGB(1.0, rand(state, 0.4, 0.7), 0.12)
 }
 
-/** Vehicle/strike explosion: fireball + smoke + scrap. */
+/** Vehicle/strike explosion: big fireball + smoke + flung scrap + knockback. */
 export function spawnExplosion(state: SimState, x: number, y: number, z: number): void {
-  for (let i = 0; i < 18; i++) {
+  state.explosions++
+  for (let i = 0; i < 26; i++) {
     const p = alloc(state)
     p.active = true
     p.kind = 'fire'
     p.pos.set(x, y + 0.5, z)
-    p.vel.set(rand(state, -7, 7), rand(state, 2, 9), rand(state, -7, 7))
-    p.maxLife = rand(state, 0.4, 0.9)
+    p.vel.set(rand(state, -11, 11), rand(state, 3, 14), rand(state, -11, 11))
+    p.maxLife = rand(state, 0.45, 1.0)
     p.life = p.maxLife
-    p.size = rand(state, 0.4, 0.8)
+    p.size = rand(state, 0.5, 1.1)
     p.color.setRGB(1.0, rand(state, 0.3, 0.6), 0.1)
   }
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 16; i++) {
     const p = alloc(state)
     p.active = true
     p.kind = 'debris'
     p.pos.set(x, y + 0.5, z)
-    p.vel.set(rand(state, -6, 6), rand(state, 3, 8), rand(state, -6, 6))
-    p.maxLife = rand(state, 1.0, 1.8)
+    p.vel.set(rand(state, -10, 10), rand(state, 4, 13), rand(state, -10, 10))
+    p.maxLife = rand(state, 1.2, 2.2)
     p.life = p.maxLife
-    p.size = rand(state, 0.18, 0.34)
+    p.size = rand(state, 0.2, 0.42)
     p.color.setRGB(0.12, 0.12, 0.13)
   }
-  for (let i = 0; i < 6; i++) emitSmoke(state, x, y + 1, z)
+  for (let i = 0; i < 8; i++) emitSmoke(state, x, y + 1, z)
+
+  // --- Shockwave: knock back nearby units & the player (no chained damage). ---
+  const R = 11
+  for (const u of state.police) {
+    if (!u.active) continue
+    const dx = u.pos.x - x
+    const dz = u.pos.z - z
+    const d = Math.hypot(dx, dz)
+    if (d < R && d > 0.01) {
+      const f = (1 - d / R) * 6
+      u.pos.x += (dx / d) * f
+      u.pos.z += (dz / d) * f
+      u.state.speed *= 0.4
+    }
+  }
+  if (state.player.mode === 'vehicle') {
+    const pv = state.vehicles[state.player.vehicleIndex]
+    const d = Math.hypot(pv.pos.x - x, pv.pos.z - z)
+    if (d < R && d > 0.01) {
+      const f = (1 - d / R) * 6
+      pv.pos.x += ((pv.pos.x - x) / d) * f
+      pv.pos.z += ((pv.pos.z - z) / d) * f
+      pv.state.speed *= 0.5
+      pv.squash = Math.max(pv.squash, 0.2)
+    }
+  }
 }
 
 /** Integrate all active particles. */

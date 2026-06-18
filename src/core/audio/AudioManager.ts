@@ -9,10 +9,7 @@
  * Fully defensive — if Web Audio is unavailable it silently no-ops.
  */
 
-type CueName = 'heatUp' | 'escape' | 'heli' | 'bust' | 'roadblock'
-
-// Minor-ish scale (Hz) used by the music scheduler.
-const SCALE = [130.81, 146.83, 155.56, 174.61, 196.0, 207.65, 233.08, 261.63]
+type CueName = 'heatUp' | 'escape' | 'heli' | 'bust' | 'roadblock' | 'explosion'
 
 class AudioManagerImpl {
   private ctx: AudioContext | null = null
@@ -31,21 +28,14 @@ class AudioManagerImpl {
   private musicVol = 0.7
   private sfxVol = 0.8
   private running = false
-
   private schedulerId: number | null = null
-  private nextNote = 0
-  private beat = 0
-  private heat = 0
 
   /** Lazily create the context (must follow a user gesture). */
   start(): void {
     try {
       if (!this.ctx) this.build()
       this.ctx?.resume()
-      if (this.running) return
       this.running = true
-      this.nextNote = this.ctx ? this.ctx.currentTime + 0.1 : 0
-      this.schedulerId = window.setInterval(() => this.schedule(), 25)
     } catch {
       /* audio unsupported — ignore */
     }
@@ -77,7 +67,6 @@ class AudioManagerImpl {
     inVehicle: boolean
   }): void {
     if (!this.ctx || !this.running) return
-    this.heat = p.heat
     const t = this.ctx.currentTime
 
     // Engine: frequency + volume track speed when driving.
@@ -113,6 +102,9 @@ class AudioManagerImpl {
         break
       case 'roadblock':
         this.blip(220, 220, 0.3, 'square')
+        break
+      case 'explosion':
+        this.explosion()
         break
     }
     void t
@@ -167,45 +159,43 @@ class AudioManagerImpl {
     this.sirenLfo.start()
   }
 
-  private schedule(): void {
-    if (!this.ctx || !this.musicGain) return
-    const bpm = 88 + this.heat * 11
-    const spb = 60 / bpm
-    while (this.nextNote < this.ctx.currentTime + 0.15) {
-      this.playBeat(this.nextNote)
-      this.beat = (this.beat + 1) % 8
-      this.nextNote += spb
+  /** Punchy explosion: filtered noise burst + descending low boom. */
+  private explosion(): void {
+    if (!this.ctx || !this.sfxGain) return
+    const t = this.ctx.currentTime
+    const dur = 0.6
+    const buffer = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * dur), this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) {
+      const decay = 1 - i / data.length
+      data[i] = (Math.random() * 2 - 1) * decay * decay
     }
-  }
+    const src = this.ctx.createBufferSource()
+    src.buffer = buffer
+    const filt = this.ctx.createBiquadFilter()
+    filt.type = 'lowpass'
+    filt.frequency.setValueAtTime(1100, t)
+    filt.frequency.exponentialRampToValueAtTime(120, t + dur)
+    const ng = this.ctx.createGain()
+    ng.gain.setValueAtTime(0.7 * this.sfxVol, t)
+    ng.gain.exponentialRampToValueAtTime(0.001, t + dur)
+    src.connect(filt)
+    filt.connect(ng)
+    ng.connect(this.sfxGain)
+    src.start(t)
+    src.stop(t + dur)
 
-  private playBeat(time: number): void {
-    const intensity = Math.min(1, this.heat / 8)
-    // Bass on every beat.
-    const root = SCALE[0] / 2
-    this.note(root, time, 0.18, 'triangle', this.musicGain!, 0.5)
-    // Mid pulse grows with heat.
-    if (this.beat % 2 === 0 || intensity > 0.4) {
-      this.note(SCALE[(this.beat * 3) % SCALE.length], time, 0.12, 'sawtooth', this.musicGain!, 0.18 + intensity * 0.25)
-    }
-    // Hi arpeggio at higher heat.
-    if (intensity > 0.6) {
-      this.note(SCALE[(this.beat * 5) % SCALE.length] * 2, time, 0.08, 'square', this.musicGain!, 0.12)
-    }
-  }
-
-  private note(freq: number, time: number, dur: number, type: OscillatorType, dest: GainNode, peak: number): void {
-    if (!this.ctx) return
     const osc = this.ctx.createOscillator()
-    const g = this.ctx.createGain()
-    osc.type = type
-    osc.frequency.value = freq
-    g.gain.setValueAtTime(0.0001, time)
-    g.gain.exponentialRampToValueAtTime(peak, time + 0.01)
-    g.gain.exponentialRampToValueAtTime(0.0001, time + dur)
-    osc.connect(g)
-    g.connect(dest)
-    osc.start(time)
-    osc.stop(time + dur + 0.02)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(95, t)
+    osc.frequency.exponentialRampToValueAtTime(34, t + 0.5)
+    const og = this.ctx.createGain()
+    og.gain.setValueAtTime(0.55 * this.sfxVol, t)
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
+    osc.connect(og)
+    og.connect(this.sfxGain)
+    osc.start(t)
+    osc.stop(t + 0.55)
   }
 
   private blip(from: number, to: number, dur: number, type: OscillatorType): void {

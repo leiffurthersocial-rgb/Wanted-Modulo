@@ -2,7 +2,8 @@ import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { CharacterId } from '@/types'
-import { CAMERA, HEAT, SIM } from '@/config/constants'
+import { CAMERA, HEAT, POLICE, SIM } from '@/config/constants'
+import { sampleHeight } from '@/game/world/terrain'
 import { Input } from '@/core/input/InputManager'
 import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
@@ -34,6 +35,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const prevHeat = useRef(0)
   const prevSpotted = useRef(false)
   const prevHeli = useRef(false)
+  const prevExplosions = useRef(0)
   const prevClasses = useRef<PoliceClassId[]>(useFleetStore.getState().policeClasses.slice())
 
   const sim = useMemo(() => createSimState(), [])
@@ -68,7 +70,9 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
     const { player } = sim
 
-    // --- Chase camera ---
+    // --- Chase camera (follows terrain height) ---
+    const py = sampleHeight(player.pos.x, player.pos.z)
+    player.pos.y = py
     const inVehicle = player.mode === 'vehicle'
     const camHeading = inVehicle ? player.heading : 0
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
@@ -78,11 +82,11 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     const desiredZ = player.pos.z - fz * cfg.distance
     const posT = 1 - Math.exp(-CAMERA.lerp * dt)
     camera.position.x += (desiredX - camera.position.x) * posT
-    camera.position.y += (cfg.height - camera.position.y) * posT
+    camera.position.y += (py + cfg.height - camera.position.y) * posT
     camera.position.z += (desiredZ - camera.position.z) * posT
     const lookT = 1 - Math.exp(-CAMERA.lookLerp * dt)
     lookTarget.current.x += (player.pos.x - lookTarget.current.x) * lookT
-    lookTarget.current.y += (1.2 - lookTarget.current.y) * lookT
+    lookTarget.current.y += (py + 1.2 - lookTarget.current.y) * lookT
     lookTarget.current.z += (player.pos.z - lookTarget.current.z) * lookT
     camera.lookAt(lookTarget.current)
 
@@ -105,7 +109,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const g = vehicleRefs.current[i]
       if (!g) continue
       const v = sim.vehicles[i]
-      g.position.set(v.pos.x, 0, v.pos.z)
+      g.position.set(v.pos.x, sampleHeight(v.pos.x, v.pos.z), v.pos.z)
       g.rotation.y = v.state.heading
       const sq = v.squash
       g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
@@ -118,7 +122,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const u = sim.police[i]
       if (u.active) {
         g.visible = true
-        g.position.set(u.pos.x, 0, u.pos.z)
+        g.position.set(u.pos.x, sampleHeight(u.pos.x, u.pos.z), u.pos.z)
         g.rotation.y = u.state.heading
       } else {
         g.visible = false
@@ -132,7 +136,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const h = sim.helis[i]
       if (h.active) {
         g.visible = true
-        g.position.copy(h.pos)
+        g.position.set(h.pos.x, sampleHeight(h.pos.x, h.pos.z) + POLICE.heliHeight, h.pos.z)
         g.rotation.y = h.heading
         const rotor = Registry.heliRotors[i]
         if (rotor) rotor.rotation.y += 40 * dt
@@ -223,6 +227,10 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       prevSpotted.current = sim.heat.spotted
       if (heliActive && !prevHeli.current) Audio.cue('heli')
       prevHeli.current = heliActive
+      if (sim.explosions > prevExplosions.current) {
+        Audio.cue('explosion')
+        prevExplosions.current = sim.explosions
+      }
     }
 
     Input.lateUpdate()
