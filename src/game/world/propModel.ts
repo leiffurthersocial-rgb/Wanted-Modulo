@@ -50,6 +50,13 @@ function insideBuildingCell(x: number, z: number): boolean {
 /** Destructible (non-ramp) types — ramps are placed only on riverbanks. */
 const DESTRUCTIBLE = PROP_TYPE_LIST.filter((t) => !PROP_TYPES[t].launch)
 
+/**
+ * Fraction of non-tree breakables (benches, signs, fences, …) that survive a
+ * thinning roll. Trees are unaffected, ramps/unbreakables are placed elsewhere —
+ * so street clutter stays sparse while forests keep their density.
+ */
+const NON_TREE_KEEP = 0.14
+
 function pickType(r: number): PropType {
   let total = 0
   for (const t of DESTRUCTIBLE) total += PROP_TYPES[t].weight
@@ -120,6 +127,8 @@ export function ensurePropWindow(px: number, pz: number): boolean {
       if (insideBuildingCell(jx, jz)) continue
 
       const type = pickType(rand())
+      // Drastically thin out non-tree breakable clutter; trees keep full density.
+      if (type !== 'tree' && rand() > NON_TREE_KEEP) continue
       if (counts[type] >= PROP_CAPACITY) continue
       const inst: PropInstance = { type, x: jx, z: jz, rot: rand() * Math.PI * 2, typeIndex: counts[type]++ }
       if (type === 'tree') {
