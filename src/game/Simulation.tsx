@@ -78,8 +78,12 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     const { player } = sim
 
     // --- Chase camera (follows the surface; floats on water when swimming) ---
-    const py = player.swimming ? WATER_Y : surfaceHeight(player.pos.x, player.pos.z)
     const inVehicle = player.mode === 'vehicle'
+    const py = inVehicle
+      ? sim.vehicles[player.vehicleIndex].y
+      : player.swimming
+        ? WATER_Y
+        : surfaceHeight(player.pos.x, player.pos.z)
     // On foot the camera orbits with free-look; driving locks behind the car.
     const camHeading = inVehicle ? player.heading : look.yaw
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
@@ -118,13 +122,11 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const g = vehicleRefs.current[i]
       if (!g) continue
       const v = sim.vehicles[i]
-      // Ramp jump arc + drift yaw (face slightly out of the slide).
-      const arc = v.air > 0 && v.airTotal > 0
-        ? Math.sin((1 - v.air / v.airTotal) * Math.PI) * 3.2
-        : 0
+      // Gravity-driven height + drift yaw + airborne nose pitch.
       const driftYaw = Math.atan2(v.state.slip, Math.abs(v.state.speed) + 4) * 0.6
-      g.position.set(v.pos.x, surfaceHeight(v.pos.x, v.pos.z) + arc, v.pos.z)
+      g.position.set(v.pos.x, v.y, v.pos.z)
       g.rotation.y = v.state.heading + driftYaw
+      g.rotation.x = THREE.MathUtils.clamp(-v.vy * 0.03, -0.35, 0.35)
       const sq = v.squash
       g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
     }

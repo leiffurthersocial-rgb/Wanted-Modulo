@@ -1,4 +1,4 @@
-import { DAMAGE, PROPS, SCORE } from '@/config/constants'
+import { DAMAGE, PROPS, SCORE, VEHICLE } from '@/config/constants'
 import { PROP_TYPES } from '@/game/world/propCatalog'
 import { sampleHeight } from '@/game/world/terrain'
 import type { SimState, VehicleEntity } from '@/game/sim/state'
@@ -47,13 +47,12 @@ export function updatePropCollisions(state: SimState, _dt: number): void {
     const dz = prop.z - player.pos.z
     if (dx * dx + dz * dz > r * r) continue
 
-    // Ramps launch the car into a fun arc instead of being destroyed.
+    // Ramps fling the car upward (gravity floats it back down) — no destruction.
     if (tdef.launch) {
-      if (v.air <= 0 && speed > PROPS.smashSpeed) {
-        const airtime = 0.55 + Math.min(0.6, speed / v.def.topSpeed * 0.6)
-        v.air = airtime
-        v.airTotal = airtime
-        v.state.speed = Math.min(v.def.topSpeed, v.state.speed * 1.08 + 2)
+      const grounded = v.y <= sampleHeight(v.pos.x, v.pos.z) + 0.4
+      if (grounded && speed > PROPS.smashSpeed) {
+        v.vy = VEHICLE.rampLaunch * (0.7 + Math.min(0.6, speed / v.def.topSpeed))
+        v.state.speed = Math.min(v.def.topSpeed, v.state.speed * 1.06 + 1.5)
       }
       continue
     }

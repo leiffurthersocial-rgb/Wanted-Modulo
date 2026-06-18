@@ -74,11 +74,11 @@ export function Ground() {
       <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]} frustumCulled={false}>
         <planeGeometry args={[SIZE, SIZE]} />
         <meshStandardMaterial
-          color="#2f6fb0"
+          color="#3f95dd"
           transparent
-          opacity={0.8}
-          roughness={0.25}
-          metalness={0.1}
+          opacity={0.82}
+          roughness={0.12}
+          metalness={0.25}
         />
       </mesh>
     </group>

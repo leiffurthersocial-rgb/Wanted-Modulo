@@ -97,26 +97,38 @@ const ROAD_HALF = 5
 /** Bridge deck height — sits just above the plains so approaches are seamless. */
 export const BRIDGE_Y = 0.3
 
-/** Distance to the nearest road centerline running along Z (vertical road). */
-function distRoadX(x: number): number {
-  const n = Math.round(x / CITY_PITCH - 0.5)
-  return Math.abs(x - (n + 0.5) * CITY_PITCH)
+/** Only every Nth road carries a bridge, so crossings stay rare and special. */
+const BRIDGE_EVERY = 4
+
+/** Index of the nearest road centerline running along Z (vertical road). */
+function roadIndexX(x: number): number {
+  return Math.round(x / CITY_PITCH - 0.5)
 }
 
-/** Distance to the nearest road centerline running along X (horizontal road). */
+/** Index of the nearest road centerline running along X (horizontal road). */
+function roadIndexZ(z: number): number {
+  return Math.round(z / CITY_PITCH - 0.5)
+}
+
+function distRoadX(x: number): number {
+  return Math.abs(x - (roadIndexX(x) + 0.5) * CITY_PITCH)
+}
+
 function distRoadZ(z: number): number {
-  const n = Math.round(z / CITY_PITCH - 0.5)
-  return Math.abs(z - (n + 0.5) * CITY_PITCH)
+  return Math.abs(z - (roadIndexZ(z) + 0.5) * CITY_PITCH)
 }
 
 /**
- * True where a road corridor crosses a river — i.e. where a drivable bridge
- * deck spans the water. Deterministic, so the renderer, collision and the
- * height query all agree on exactly where you can drive across.
+ * True where a *major* road corridor crosses a river — i.e. where a drivable
+ * bridge deck spans the water. Only every Nth road is a major (bridged) road,
+ * so rivers stay meaningful obstacles and bridges read as landmarks.
+ * Deterministic, so renderer, collision and height query all agree.
  */
 export function isBridge(x: number, z: number): boolean {
   if (riverFactor(x, z) <= 0.06) return false
-  return distRoadX(x) < ROAD_HALF || distRoadZ(z) < ROAD_HALF
+  const onMajorX = distRoadX(x) < ROAD_HALF && ((roadIndexX(x) % BRIDGE_EVERY) + BRIDGE_EVERY) % BRIDGE_EVERY === 0
+  const onMajorZ = distRoadZ(z) < ROAD_HALF && ((roadIndexZ(z) % BRIDGE_EVERY) + BRIDGE_EVERY) % BRIDGE_EVERY === 0
+  return onMajorX || onMajorZ
 }
 
 /** True when the bridge here runs along Z (a vertical road) — its railings sit

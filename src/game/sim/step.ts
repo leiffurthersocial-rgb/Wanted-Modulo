@@ -6,7 +6,7 @@ import {
   updatePropCollisions,
   updateVehicleDamage,
 } from './systems/destruction'
-import { recycleVehicles } from './systems/vehicles'
+import { recycleVehicles, updateVehicleVertical } from './systems/vehicles'
 import { updateParticles } from './systems/particles'
 import { heatLevel, updateHeat } from './systems/heat'
 import {
@@ -31,6 +31,7 @@ export function stepSim(state: SimState, input: StepInput, dt: number): void {
   // 1. Player movement + world collisions.
   updatePlayer(state, input, dt)
   updatePropCollisions(state, dt)
+  updateVehicleVertical(state, dt)
   recycleVehicles(state)
 
   // 2. Perception -> heat escalation.

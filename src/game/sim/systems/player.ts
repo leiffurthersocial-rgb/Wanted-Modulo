@@ -2,7 +2,7 @@ import { DAMAGE, PLAYER } from '@/config/constants'
 import { dampAngle } from '@/core/math/angles'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision } from '@/game/sim/los'
-import { isBridge, isWater, waterDepth } from '@/game/world/terrain'
+import { isBridge, isWater, surfaceHeight, waterDepth } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
 import { damageWorldVehicle, ejectPlayer } from './destruction'
 
@@ -103,14 +103,13 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
     const v = state.vehicles[player.vehicleIndex]
     const throttle = (input.forward ? 1 : 0) - (input.backward ? 1 : 0)
     const steer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
-    const airborne = v.air > 0
+    // Airborne when the body is meaningfully above the surface (ramp/ledge).
+    const airborne = v.y > surfaceHeight(v.pos.x, v.pos.z) + 0.5
     const { dx, dz } = stepVehicle(v.state, { throttle, steer, handbrake: input.handbrake }, v.def, dt)
     v.pos.x += dx
     v.pos.z += dz
 
-    if (airborne) {
-      v.air = Math.max(0, v.air - dt)
-    } else {
+    if (!airborne) {
       // Building collision -> bump + speed loss + impact damage.
       const radius = v.def.size.width * 0.6
       const c = buildingCollision(v.pos.x, v.pos.z, radius)

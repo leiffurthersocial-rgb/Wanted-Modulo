@@ -9,13 +9,26 @@ export const SIM = {
 
 export const PLAYER = {
   /** On-foot movement speed (units/sec). */
-  footSpeed: 7.5,
+  footSpeed: 9.2,
   /** How quickly the character rotates to face movement (per second). */
   turnLerp: 14,
   /** Radius within which the player can steal/enter a vehicle. */
   enterRadius: 5.5,
   /** Spawn position. */
   spawn: [0, 0, 0] as [number, number, number],
+} as const
+
+/** Vertical (jump/fall) model for vehicles — kept gentle so cars float down
+ *  from ramps and ledges with weight instead of dropping like a stone. */
+export const VEHICLE = {
+  /** Downward acceleration (units/s²). Lower = slower, floatier fall. */
+  gravity: 13,
+  /** Upward launch speed when hitting a ramp at speed. */
+  rampLaunch: 8.5,
+  /** Terminal fall speed (units/s). */
+  maxFall: 17,
+  /** Vertical settle rate when rolling onto higher ground (per second). */
+  riseLerp: 14,
 } as const
 
 export const CAMERA = {

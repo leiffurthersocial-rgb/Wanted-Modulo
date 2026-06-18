@@ -44,10 +44,10 @@ export interface VehicleEntity {
   smokeTimer: number
   /** Transient squash applied on impact (visual), decays to 0. */
   squash: number
-  /** Remaining airtime (s) after launching off a ramp; 0 when grounded. */
-  air: number
-  /** Total airtime of the current jump, for the arc shape. */
-  airTotal: number
+  /** Current height above the world baseline (gravity-integrated). */
+  y: number
+  /** Vertical velocity (units/s) for ramp jumps and falling off ledges. */
+  vy: number
 }
 
 export interface PoliceUnit {
@@ -206,8 +206,8 @@ export function createSimState(): SimState {
     wrecked: false,
     smokeTimer: 0,
     squash: 0,
-    air: 0,
-    airTotal: 0,
+    y: 0,
+    vy: 0,
   }))
 
   return {

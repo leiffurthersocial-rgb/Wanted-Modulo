@@ -19,6 +19,7 @@ const RENDER_CAP = 1200
  */
 export function City() {
   const meshRef = useRef<THREE.InstancedMesh>(null)
+  const roofRef = useRef<THREE.InstancedMesh>(null)
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const colors = useMemo(() => ALL_COLORS.map((c) => new THREE.Color(c)), [])
   const lights = useMemo(() => getLightsTexture(), [])
@@ -31,7 +32,8 @@ export function City() {
 
   const rebuild = (cx: number, cz: number) => {
     const mesh = meshRef.current
-    if (!mesh) return
+    const roof = roofRef.current
+    if (!mesh || !roof) return
     const buildings = streamBuildings(cx, cz, RENDER_RADIUS)
     const n = Math.min(buildings.length, RENDER_CAP)
     const { m, q, pos, scale } = scratch
@@ -42,9 +44,16 @@ export function City() {
       m.compose(pos, q, scale)
       mesh.setMatrixAt(i, m)
       mesh.setColorAt(i, colors[b.colorIndex])
+      // Darker rooftop cap reads as a real building top in the skyline.
+      pos.set(b.x, b.baseY + b.h - 1 + 0.18, b.z)
+      scale.set(b.w * 1.04, 0.5, b.d * 1.04)
+      m.compose(pos, q, scale)
+      roof.setMatrixAt(i, m)
     }
     mesh.count = n
+    roof.count = n
     mesh.instanceMatrix.needsUpdate = true
+    roof.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
 
@@ -69,22 +78,33 @@ export function City() {
   })
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[undefined, undefined, RENDER_CAP]}
-      castShadow
-      receiveShadow
-      frustumCulled={false}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial
-        ref={matRef}
-        roughness={0.7}
-        metalness={0.05}
-        emissive="#ffcaa0"
-        emissiveMap={lights}
-        emissiveIntensity={0}
-      />
-    </instancedMesh>
+    <group>
+      <instancedMesh
+        ref={meshRef}
+        args={[undefined, undefined, RENDER_CAP]}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial
+          ref={matRef}
+          roughness={0.62}
+          metalness={0.05}
+          emissive="#ffcaa0"
+          emissiveMap={lights}
+          emissiveIntensity={0}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={roofRef}
+        args={[undefined, undefined, RENDER_CAP]}
+        castShadow
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="#2c3344" roughness={0.85} />
+      </instancedMesh>
+    </group>
   )
 }

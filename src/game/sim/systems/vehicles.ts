@@ -1,6 +1,32 @@
+import { VEHICLE } from '@/config/constants'
 import { buildingCollision } from '@/game/sim/los'
-import { isWater } from '@/game/world/terrain'
+import { isWater, surfaceHeight } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+
+/**
+ * Gentle vertical physics for every vehicle: ramp launches and ledges give the
+ * car upward/forward momentum, then a soft gravity floats it back down to the
+ * drivable surface. Cars settle quickly when rolling onto higher ground so the
+ * wheels never sink. Keeps the world feeling weighty without harsh snapping.
+ */
+export function updateVehicleVertical(state: SimState, dt: number): void {
+  for (const v of state.vehicles) {
+    const ground = surfaceHeight(v.pos.x, v.pos.z)
+    if (v.y < ground) {
+      // Ground rose under us (uphill) — settle up smoothly, don't pop.
+      v.y += (ground - v.y) * (1 - Math.exp(-VEHICLE.riseLerp * dt))
+      if (v.y < ground - 0.02) v.vy = 0
+      else { v.y = ground; v.vy = 0 }
+    } else {
+      v.vy = Math.max(-VEHICLE.maxFall, v.vy - VEHICLE.gravity * dt)
+      v.y += v.vy * dt
+      if (v.y <= ground) {
+        v.y = ground
+        v.vy = 0
+      }
+    }
+  }
+}
 
 /** Beyond this distance an idle civilian car is eligible to be recycled. */
 const FAR = 240
@@ -35,6 +61,8 @@ export function recycleVehicles(state: SimState): void {
       const z = p.z + Math.sin(a) * PARK_RADIUS
       if (isWater(x, z) || buildingCollision(x, z, 3).hit) continue
       v.pos.set(x, 0, z)
+      v.y = surfaceHeight(x, z)
+      v.vy = 0
       v.state.heading = state.rand() * Math.PI * 2
       v.state.speed = 0
       v.state.slip = 0

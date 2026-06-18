@@ -57,15 +57,21 @@ export function stepVehicle(
   // Steering authority ramps up with speed; handbrake sharpens rotation.
   const speedFactor = clamp(state.speed / (topSpeed * 0.45), -1, 1)
   const handbrake = !!input.handbrake
-  const steerAuthority = def.handling * (handbrake ? 1.55 : 1)
+  const steerAuthority = def.handling * (handbrake ? 1.7 : 1)
   state.heading += input.steer * steerAuthority * speedFactor * dt
 
-  // Lateral grip: hard cornering induces slip; handbrake removes most grip.
-  const grip = handbrake ? 1.6 : 7.5 / Math.max(0.6, def.weight) + 3.2
-  const induce = state.speed * input.steer * (handbrake ? 1.15 : 0.32)
-  state.slip += induce * dt * 4
+  // Lateral grip: cornering builds slip, tyres claw it back. The handbrake
+  // breaks grip for big, controllable, smoothly-recovering drifts. Heavier
+  // cars resist sliding a little more.
+  const grip = handbrake ? 2.2 : 6.5 + Math.min(2, def.weight)
+  const induce = state.speed * input.steer * (handbrake ? 1.0 : 0.22)
+  state.slip += induce * dt * 3.2
   state.slip -= state.slip * grip * dt
-  state.slip = clamp(state.slip, -topSpeed * 0.9, topSpeed * 0.9)
+  const maxSlip = topSpeed * (handbrake ? 0.8 : 0.4)
+  state.slip = clamp(state.slip, -maxSlip, maxSlip)
+
+  // Drifting scrubs a little forward speed, like real tyres.
+  state.speed -= Math.abs(state.slip) * 0.05 * dt
 
   // Forward = (sin h, cos h); right (lateral) = (cos h, -sin h).
   const fx = Math.sin(state.heading)
