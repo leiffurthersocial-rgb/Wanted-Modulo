@@ -18,6 +18,7 @@ import { VoxelVehicle } from '@/game/models/VoxelVehicle'
 import { Registry } from '@/game/sim/registry'
 import { createSimState } from '@/game/sim/state'
 import { stepSim } from '@/game/sim/step'
+import { getDebug } from '@/state/useDebugStore'
 
 // Shared scratch objects (single-threaded — safe to reuse).
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0)
@@ -44,7 +45,9 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const sim = useMemo(() => createSimState(), [])
 
   useFrame((_, delta) => {
-    const dt = Math.min(delta, SIM.maxDt)
+    const debug = getDebug()
+    const scale = debug.enabled ? debug.timeScale : 1
+    const dt = Math.min(delta * scale, SIM.maxDt)
     const store = useGameStore.getState()
 
     // Pause toggle works in any phase.

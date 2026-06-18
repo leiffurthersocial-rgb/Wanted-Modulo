@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { useGameStore } from '@/state/useGameStore'
+import { DebugMenu, useTripleTap } from './DebugMenu'
 
 export function PauseMenu() {
   const resume = useGameStore((s) => s.resume)
   const endRun = useGameStore((s) => s.endRun)
+  const [showDebug, setShowDebug] = useState(false)
+  const onTitleTap = useTripleTap(() => setShowDebug(true))
 
   return (
     <div className="screen overlay">
-      <div className="title">
+      <div className="title" onClick={onTitleTap}>
         <div className="wanted" style={{ fontSize: '2rem' }}>PAUSED</div>
       </div>
       <div className="btn-row">
@@ -18,6 +22,8 @@ export function PauseMenu() {
         </button>
       </div>
       <div className="muted">Press ESC to resume</div>
+
+      {showDebug && <DebugMenu onClose={() => setShowDebug(false)} />}
     </div>
   )
 }

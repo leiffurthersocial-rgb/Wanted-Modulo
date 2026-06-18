@@ -7,6 +7,7 @@ import { landmarkCollision } from '@/game/world/landmarkModel'
 import { isWater, sampleHeight } from '@/game/world/terrain'
 import { tierFor, type HeatTier } from '@/game/sim/heatTable'
 import { damageTier, type PoliceUnit, type SimState } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 import { damageWorldVehicle } from './destruction'
 import { emitFire, emitSmoke, spawnExplosion } from './particles'
 
@@ -158,6 +159,14 @@ function deployRoadblock(state: SimState, tier: HeatTier): void {
 
 export function manageFleet(state: SimState, dt: number, level: number): void {
   const tier = tierFor(level)
+
+  // Debug: clear the streets and skip all spawning.
+  const debug = getDebug()
+  if (debug.enabled && debug.noPolice) {
+    for (const u of state.police) u.active = false
+    for (const h of state.helis) h.active = false
+    return
+  }
 
   // Count and cull.
   let ground = 0
@@ -407,8 +416,9 @@ export function updateCapture(state: SimState, dt: number): void {
     if (u.pos.distanceTo(p.pos) < CAPTURE.radius) near++
   }
 
-  if (state.power.shield > 0) {
-    // SHIELD: cannot be captured; bleed off any progress.
+  const debug = getDebug()
+  if (state.power.shield > 0 || (debug.enabled && debug.noCapture)) {
+    // SHIELD / debug no-capture: cannot be captured; bleed off any progress.
     state.capture -= CAPTURE.recover * 2 * dt
   } else if (near > 0 && (onFoot || state.playerSpeed < CAPTURE.slowSpeed)) {
     const mult = onFoot ? CAPTURE.onFootMultiplier : 1

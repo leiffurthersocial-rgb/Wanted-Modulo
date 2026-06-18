@@ -1,14 +1,18 @@
+import { useState } from 'react'
 import { useGameStore } from '@/state/useGameStore'
 import { useProgressionStore } from '@/state/useProgressionStore'
+import { DebugMenu, useTripleTap } from './DebugMenu'
 
 export function MainMenu() {
   const setPhase = useGameStore((s) => s.setPhase)
   const bestScore = useProgressionStore((s) => s.bestScore)
   const totalRuns = useProgressionStore((s) => s.totalRuns)
+  const [showDebug, setShowDebug] = useState(false)
+  const onTitleTap = useTripleTap(() => setShowDebug(true))
 
   return (
     <div className="screen">
-      <div className="title">
+      <div className="title" onClick={onTitleTap} title="">
         <div className="wanted">WANTED</div>
         <div className="modulo">MODULO</div>
       </div>
@@ -37,6 +41,8 @@ export function MainMenu() {
       <div className="muted" style={{ position: 'absolute', bottom: 18 }}>
         Drive, drift and survive an endless voxel city · drag to look around on foot
       </div>
+
+      {showDebug && <DebugMenu onClose={() => setShowDebug(false)} />}
     </div>
   )
 }

@@ -626,6 +626,59 @@ canvas {
   accent-color: var(--accent);
 }
 
+/* ---------- Debug menu ---------- */
+.debug-overlay {
+  z-index: 20;
+}
+
+.debug-panel {
+  width: min(560px, 94vw);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.debug-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.debug-head h2 {
+  margin: 0;
+}
+
+.debug-note {
+  margin: 0.25rem 0 0.6rem;
+  font-size: 0.82rem;
+}
+
+.debug-body h3 {
+  margin: 1rem 0 0.2rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.debug-body.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+.btn.small {
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+
 /* ---------- Touch controls ---------- */
 .touch-layer {
   position: absolute;

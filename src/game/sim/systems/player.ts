@@ -5,6 +5,7 @@ import { buildingCollision } from '@/game/sim/los'
 import { landmarkCollision } from '@/game/world/landmarkModel'
 import { isBridge, isWater, surfaceHeight, waterDepth } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 import { POWER } from './powerups'
 import { damageWorldVehicle, ejectPlayer } from './destruction'
 
@@ -28,6 +29,7 @@ const CAR_DROWN_DEPTH = 1.4
 /** Advances the player (on foot or driving) and resolves world collisions. */
 export function updatePlayer(state: SimState, input: StepInput, dt: number): void {
   const { player } = state
+  const debug = getDebug()
 
   // --- Enter / exit / steal ---
   if (input.interactPressed) {
@@ -85,7 +87,8 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
       const rz = -(ix / len) * s + (iz / len) * c
       const nx = rx
       const nz = rz
-      const moveSpeed = PLAYER.footSpeed * (swimming ? SWIM_MULT : 1)
+      const footMult = debug.enabled ? debug.footSpeedMult : 1
+      const moveSpeed = PLAYER.footSpeed * footMult * (swimming ? SWIM_MULT : 1)
       const step = moveSpeed * dt
       player.pos.x += nx * step
       player.pos.z += nz * step
@@ -112,7 +115,8 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
     const steer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
     // Airborne when the body is meaningfully above the surface (ramp/ledge).
     const airborne = v.y > surfaceHeight(v.pos.x, v.pos.z) + 0.5
-    const speedMult = state.power.boost > 0 ? POWER.nitroMult : 1
+    const speedMult =
+      (state.power.boost > 0 ? POWER.nitroMult : 1) * (debug.enabled ? debug.speedMult : 1)
     const { dx, dz } = stepVehicle(v.state, { throttle, steer, handbrake: input.handbrake }, v.def, dt, speedMult)
     v.pos.x += dx
     v.pos.z += dz

@@ -1,0 +1,149 @@
+import { useRef } from 'react'
+import { useDebugStore } from '@/state/useDebugStore'
+
+/**
+ * Returns a click handler that fires `onUnlock` after 3 quick taps (within
+ * ~700ms of each other). Used to reveal the debug menu from a title element.
+ */
+export function useTripleTap(onUnlock: () => void): () => void {
+  const taps = useRef(0)
+  const last = useRef(0)
+  return () => {
+    const now = performance.now()
+    taps.current = now - last.current < 700 ? taps.current + 1 : 1
+    last.current = now
+    if (taps.current >= 3) {
+      taps.current = 0
+      onUnlock()
+    }
+  }
+}
+
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button className={`toggle ${value ? 'on' : ''}`} onClick={() => onChange(!value)}>
+      {value ? 'On' : 'Off'}
+    </button>
+  )
+}
+
+function Slider({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <input
+      className="slider"
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+    />
+  )
+}
+
+/**
+ * Hidden developer overlay (unlocked by tapping the title 3×). Lets you toggle
+ * invincibility, tune speeds/gravity, freeze heat, clear the police and more.
+ * Every control writes to the persisted debug store; the simulation reads those
+ * values live, so changes apply instantly — even mid-run.
+ */
+export function DebugMenu({ onClose }: { onClose: () => void }) {
+  const d = useDebugStore()
+
+  return (
+    <div className="screen overlay debug-overlay">
+      <div className="panel debug-panel">
+        <div className="debug-head">
+          <h2>🛠 Debug Menu</h2>
+          <Toggle value={d.enabled} onChange={(v) => d.set('enabled', v)} />
+        </div>
+        <p className="muted debug-note">
+          {d.enabled
+            ? 'Overrides are ACTIVE — gameplay is no longer fair.'
+            : 'Master switch is off — all overrides below are ignored.'}
+        </p>
+
+        <div className={`debug-body ${d.enabled ? '' : 'disabled'}`}>
+          <h3>Cheats</h3>
+          <div className="setting-row">
+            <span className="k">Invincible Vehicle</span>
+            <Toggle value={d.invincible} onChange={(v) => d.set('invincible', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Can't Be Captured</span>
+            <Toggle value={d.noCapture} onChange={(v) => d.set('noCapture', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">No Police</span>
+            <Toggle value={d.noPolice} onChange={(v) => d.set('noPolice', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Infinite Nitro</span>
+            <Toggle value={d.infiniteNitro} onChange={(v) => d.set('infiniteNitro', v)} />
+          </div>
+
+          <h3>Heat</h3>
+          <div className="setting-row">
+            <span className="k">Freeze Heat</span>
+            <Toggle value={d.freezeHeat} onChange={(v) => d.set('freezeHeat', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Forced Heat ({Math.round(d.forceHeat)})</span>
+            <Slider value={d.forceHeat} min={0} max={10} step={1} onChange={(v) => d.set('forceHeat', v)} />
+          </div>
+
+          <h3>Physics</h3>
+          <div className="setting-row">
+            <span className="k">Vehicle Speed ({d.speedMult.toFixed(2)}×)</span>
+            <Slider value={d.speedMult} min={0.25} max={4} step={0.05} onChange={(v) => d.set('speedMult', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Foot Speed ({d.footSpeedMult.toFixed(2)}×)</span>
+            <Slider value={d.footSpeedMult} min={0.25} max={4} step={0.05} onChange={(v) => d.set('footSpeedMult', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Gravity ({d.gravityMult.toFixed(2)}×)</span>
+            <Slider value={d.gravityMult} min={0.1} max={3} step={0.05} onChange={(v) => d.set('gravityMult', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Ramp Launch ({d.jumpMult.toFixed(2)}×)</span>
+            <Slider value={d.jumpMult} min={0.5} max={4} step={0.05} onChange={(v) => d.set('jumpMult', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Time Scale ({d.timeScale.toFixed(2)}×)</span>
+            <Slider value={d.timeScale} min={0.1} max={2} step={0.05} onChange={(v) => d.set('timeScale', v)} />
+          </div>
+
+          <h3>Actions</h3>
+          <div className="setting-row">
+            <span className="k">Repair Vehicle Now</span>
+            <button className="btn ghost small" onClick={() => d.set('repairPing', d.repairPing + 1)}>
+              Repair
+            </button>
+          </div>
+        </div>
+
+        <div className="debug-actions">
+          <button className="btn ghost" onClick={() => d.reset()}>
+            Reset Overrides
+          </button>
+          <button className="btn primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

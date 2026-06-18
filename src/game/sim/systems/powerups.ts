@@ -1,7 +1,11 @@
 import { SCORE } from '@/config/constants'
 import { sampleHeight } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 import { spawnExplosion } from './particles'
+
+/** Last repair-action counter we've serviced (debug "repair now" button). */
+let lastRepairPing = 0
 
 /** Effect tuning. */
 export const POWER = {
@@ -21,6 +25,22 @@ export const POWER = {
  */
 export function updatePowerups(state: SimState, dt: number): void {
   const p = state.player
+
+  // --- Debug overrides ---
+  const debug = getDebug()
+  if (debug.enabled) {
+    if (debug.infiniteNitro) state.power.boost = Math.max(state.power.boost, POWER.nitroDuration)
+    // One-shot "repair vehicle" action.
+    if (debug.repairPing !== lastRepairPing) {
+      lastRepairPing = debug.repairPing
+      if (p.mode === 'vehicle') {
+        const v = state.vehicles[p.vehicleIndex]
+        v.health = v.def.durability
+        v.wrecked = false
+      }
+    }
+  }
+
   if (state.power.boost > 0) state.power.boost = Math.max(0, state.power.boost - dt)
   if (state.power.shield > 0) state.power.shield = Math.max(0, state.power.shield - dt)
   if (state.power.banner > 0) state.power.banner = Math.max(0, state.power.banner - dt)

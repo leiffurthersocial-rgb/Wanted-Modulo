@@ -2,6 +2,7 @@ import { VEHICLE } from '@/config/constants'
 import { buildingCollision } from '@/game/sim/los'
 import { isWater, surfaceHeight } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 
 /**
  * Gentle vertical physics for every vehicle: ramp launches and ledges give the
@@ -10,6 +11,8 @@ import type { SimState } from '@/game/sim/state'
  * wheels never sink. Keeps the world feeling weighty without harsh snapping.
  */
 export function updateVehicleVertical(state: SimState, dt: number): void {
+  const debug = getDebug()
+  const gravity = VEHICLE.gravity * (debug.enabled ? debug.gravityMult : 1)
   for (let i = 0; i < state.vehicles.length; i++) {
     const v = state.vehicles[i]
     const ground = surfaceHeight(v.pos.x, v.pos.z)
@@ -19,7 +22,7 @@ export function updateVehicleVertical(state: SimState, dt: number): void {
       if (v.y < ground - 0.02) v.vy = 0
       else { v.y = ground; v.vy = 0 }
     } else {
-      v.vy = Math.max(-VEHICLE.maxFall, v.vy - VEHICLE.gravity * dt)
+      v.vy = Math.max(-VEHICLE.maxFall, v.vy - gravity * dt)
       v.y += v.vy * dt
       if (v.y <= ground) {
         const impact = -v.vy

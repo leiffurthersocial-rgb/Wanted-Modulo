@@ -2,6 +2,7 @@ import { HEAT } from '@/config/constants'
 import { clamp } from '@/core/math/angles'
 import type { SimState } from '@/game/sim/state'
 import { tierFor } from '@/game/sim/heatTable'
+import { getDebug } from '@/state/useDebugStore'
 
 /**
  * Integrates the continuous heat value (GDD §3).
@@ -13,6 +14,15 @@ import { tierFor } from '@/game/sim/heatTable'
  */
 export function updateHeat(state: SimState, dt: number): void {
   const heat = state.heat
+
+  // Debug: pin heat to a fixed level instead of escalating/decaying.
+  const debug = getDebug()
+  if (debug.enabled && debug.freezeHeat) {
+    heat.floor = debug.forceHeat
+    heat.progress = clamp(debug.forceHeat, 0, 10)
+    return
+  }
+
   heat.floor = Math.min(10, state.acc.time / HEAT.floorTimePerLevel)
 
   const tier = tierFor(Math.floor(heat.progress))

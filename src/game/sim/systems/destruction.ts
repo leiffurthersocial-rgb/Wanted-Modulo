@@ -3,14 +3,22 @@ import { PROP_TYPES } from '@/game/world/propCatalog'
 import { sampleHeight } from '@/game/world/terrain'
 import type { SimState, VehicleEntity } from '@/game/sim/state'
 import { damageTier } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 import { emitFire, emitSmoke, spawnDebris, spawnExplosion } from './particles'
+
+/** True when the given vehicle is the one the player is currently driving. */
+function isPlayerVehicle(state: SimState, v: VehicleEntity): boolean {
+  return state.player.mode === 'vehicle' && state.vehicles[state.player.vehicleIndex] === v
+}
 
 /** Applies damage to a world/player vehicle, handling wreck + explosion. */
 export function damageWorldVehicle(state: SimState, v: VehicleEntity, amount: number): void {
   if (v.wrecked || amount <= 0) return
-  // SHIELD powerup makes the player's current vehicle invulnerable.
-  if (state.power.shield > 0 && state.player.mode === 'vehicle' && state.vehicles[state.player.vehicleIndex] === v) {
-    return
+  // SHIELD powerup (or the debug invincibility flag) makes the player's current
+  // vehicle invulnerable.
+  if (isPlayerVehicle(state, v)) {
+    const debug = getDebug()
+    if (state.power.shield > 0 || (debug.enabled && debug.invincible)) return
   }
   v.health -= amount
   if (v.health <= 0) {
@@ -55,7 +63,9 @@ export function updatePropCollisions(state: SimState, _dt: number): void {
     if (tdef.launch) {
       const grounded = v.y <= sampleHeight(v.pos.x, v.pos.z) + 0.4
       if (grounded && speed > PROPS.smashSpeed) {
-        v.vy = VEHICLE.rampLaunch * (0.7 + Math.min(0.6, speed / v.def.topSpeed))
+        const debug = getDebug()
+        const jumpMult = debug.enabled ? debug.jumpMult : 1
+        v.vy = VEHICLE.rampLaunch * jumpMult * (0.7 + Math.min(0.6, speed / v.def.topSpeed))
         v.state.speed = Math.min(v.def.topSpeed, v.state.speed * 1.06 + 1.5)
       }
       continue
