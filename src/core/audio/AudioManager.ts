@@ -9,7 +9,7 @@
  * Fully defensive — if Web Audio is unavailable it silently no-ops.
  */
 
-type CueName = 'heatUp' | 'escape' | 'heli' | 'bust' | 'roadblock' | 'explosion'
+type CueName = 'heatUp' | 'escape' | 'heli' | 'bust' | 'roadblock' | 'explosion' | 'pickup'
 
 class AudioManagerImpl {
   private ctx: AudioContext | null = null
@@ -105,6 +105,9 @@ class AudioManagerImpl {
         break
       case 'explosion':
         this.explosion()
+        break
+      case 'pickup':
+        this.blip(520, 880, 0.22, 'triangle')
         break
     }
     void t

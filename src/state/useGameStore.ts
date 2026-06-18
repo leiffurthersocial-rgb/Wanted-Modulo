@@ -19,6 +19,9 @@ const emptyStats = (): RunStats => ({
   policeCount: 0,
   vehicleName: null,
   vehicleHealth: 1,
+  powerBanner: null,
+  boost: 0,
+  shield: 0,
 })
 
 export interface RadarBlip {

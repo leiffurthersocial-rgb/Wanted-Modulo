@@ -1,6 +1,24 @@
 import { useGameStore } from '@/state/useGameStore'
+import { useSettingsStore } from '@/state/useSettingsStore'
 import { HEAT_TABLE } from '@/game/sim/heatTable'
 import { Minimap } from './Minimap'
+
+const POWER_LABEL: Record<string, string> = {
+  nitro: '🚀 NITRO',
+  repair: '🔧 REPAIR',
+  shield: '🛡 SHIELD',
+  emp: '⚡ EMP',
+}
+
+function PowerHud({ banner, boost, shield }: { banner: string | null; boost: number; shield: number }) {
+  return (
+    <div className="power-hud">
+      {banner && <div className="power-banner">{POWER_LABEL[banner] ?? banner}</div>}
+      {boost > 0 && <div className="power-chip nitro">🚀 {boost.toFixed(1)}s</div>}
+      {shield > 0 && <div className="power-chip shield">🛡 {shield.toFixed(1)}s</div>}
+    </div>
+  )
+}
 
 function formatTime(t: number): string {
   const m = Math.floor(t / 60)
@@ -41,6 +59,7 @@ function StatusBanner({ status, policeCount }: { status: string; policeCount: nu
 
 export function HUD() {
   const stats = useGameStore((s) => s.stats)
+  const showMinimap = useSettingsStore((s) => s.minimap)
   const speedReadout = Math.round(stats.speed * 7)
   const capturePct = Math.round(stats.capture * 100)
 
@@ -68,6 +87,7 @@ export function HUD() {
 
       <div className="hud-center">
         <StatusBanner status={stats.status} policeCount={stats.policeCount} />
+        <PowerHud banner={stats.powerBanner} boost={stats.boost} shield={stats.shield} />
         {stats.capture > 0.02 && (
           <div className={`capture-warn ${stats.capture > 0.6 ? 'critical' : ''}`}>
             <div className="capture-label">{capturePct >= 60 ? 'BEING BUSTED!' : 'Capture'}</div>
@@ -104,7 +124,7 @@ export function HUD() {
         </div>
       </div>
 
-      <Minimap />
+      {showMinimap && <Minimap />}
 
       <div className="hud-hint">
         WASD · {stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · ESC pause

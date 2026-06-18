@@ -20,4 +20,8 @@ export const Registry = {
   propsCap: {} as Partial<Record<PropType, THREE.InstancedMesh | null>>,
   /** Building material — emissive (window glow) animated by day/night. */
   cityMaterial: null as THREE.MeshStandardMaterial | null,
+  /** Player locomotion for character animation: 0 = idle, higher = faster. */
+  playerSpeed: 0,
+  /** True while the player is on foot (vs driving). */
+  playerOnFoot: true,
 }

@@ -104,4 +104,10 @@ export interface RunStats {
   vehicleName: string | null
   /** Current vehicle health 0..1 (1 when on foot). */
   vehicleHealth: number
+  /** Just-collected powerup name to flash, or null. */
+  powerBanner: string | null
+  /** Remaining nitro boost (s). */
+  boost: number
+  /** Remaining shield (s). */
+  shield: number
 }

@@ -5,6 +5,7 @@ import type { PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { POLICE_CLASSES } from '@/game/vehicles/policeCatalog'
 import type { PropInstance } from '@/game/world/propModel'
 import { ensurePropWindow, getProps } from '@/game/world/propModel'
+import { ensurePowerupWindow, getPowerups, type Powerup, type PowerupType } from '@/game/world/powerupModel'
 import type { PropType } from '@/game/world/propCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import { PARTICLES, PLAYER, POLICE } from '@/config/constants'
@@ -129,6 +130,19 @@ export interface SimState {
   flashPhase: number
   /** Monotonic explosion counter — drives the explosion SFX cue. */
   explosions: number
+  /** Streaming powerup pickups (alive flag cleared when collected). */
+  powerups: Powerup[]
+  /** Active powerup effects + transient pickup banner. */
+  power: {
+    boost: number
+    shield: number
+    lastKind: PowerupType | null
+    banner: number
+  }
+  /** Monotonic pickup counter — drives the pickup SFX cue. */
+  pickups: number
+  /** Transient impact/landing shake 0..1, decays each frame. */
+  shake: number
   acc: {
     time: number
     distance: number
@@ -195,8 +209,9 @@ function makeParticlePool(): Particle[] {
 
 /** Builds a fresh simulation state for a new run. */
 export function createSimState(): SimState {
-  // Seed the streaming prop window around the spawn before snapshotting props.
+  // Seed the streaming prop + powerup windows around the spawn.
   ensurePropWindow(0, 0)
+  ensurePowerupWindow(0, 0)
   const vehicles: VehicleEntity[] = VEHICLE_SPAWNS.map((s) => ({
     def: s.def,
     pos: new THREE.Vector3(...s.position),
@@ -243,6 +258,10 @@ export function createSimState(): SimState {
     roadblockTimer: 6,
     flashPhase: 0,
     explosions: 0,
+    powerups: getPowerups().items,
+    power: { boost: 0, shield: 0, lastKind: null, banner: 0 },
+    pickups: 0,
+    shake: 0,
     acc: { time: 0, distance: 0, topSpeed: 0, vehiclesUsed: 0, statTimer: 0 },
     rand: mulberry32((Math.random() * 1e9) | 0),
   }

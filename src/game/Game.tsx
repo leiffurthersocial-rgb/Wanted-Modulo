@@ -14,6 +14,9 @@ import { PolicePool } from '@/game/entities/PolicePool'
 import { HeliPool } from '@/game/entities/HeliPool'
 import { ParticleField } from '@/game/entities/ParticleField'
 import { PropField } from '@/game/entities/PropField'
+import { PowerupField } from '@/game/entities/PowerupField'
+import { Landmarks } from '@/game/world/Landmarks'
+import { AutoQuality } from '@/game/world/AutoQuality'
 
 /**
  * The R3F Canvas scene root. Stays mounted across play/pause so resuming is
@@ -67,12 +70,15 @@ export function Game() {
         <Ground />
         <Bridges />
         <City />
+        <Landmarks />
         <PropField />
+        <PowerupField />
         <Simulation characterId={character} />
         <PolicePool />
         <HeliPool />
         <ParticleField />
         <PostFX />
+        <AutoQuality />
       </Suspense>
     </Canvas>
   )

@@ -3,6 +3,7 @@ import { angleDelta, clamp } from '@/core/math/angles'
 import { POLICE_CLASSES, type PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision, losBlocked } from '@/game/sim/los'
+import { landmarkCollision } from '@/game/world/landmarkModel'
 import { isWater, sampleHeight } from '@/game/world/terrain'
 import { tierFor, type HeatTier } from '@/game/sim/heatTable'
 import { damageTier, type PoliceUnit, type SimState } from '@/game/sim/state'
@@ -291,12 +292,18 @@ export function updatePolice(state: SimState, dt: number, level: number): void {
     u.pos.x += dx
     u.pos.z += dz
 
-    // Building collision.
+    // Building + landmark collision.
     const r = u.def.size.width * 0.6
     const c = buildingCollision(u.pos.x, u.pos.z, r)
     if (c.hit) {
       u.pos.x += c.nx * c.depth
       u.pos.z += c.nz * c.depth
+      u.state.speed *= 0.5
+    }
+    const lc = landmarkCollision(u.pos.x, u.pos.z, r)
+    if (lc.hit) {
+      u.pos.x += lc.nx * lc.depth
+      u.pos.z += lc.nz * lc.depth
       u.state.speed *= 0.5
     }
 
@@ -400,7 +407,10 @@ export function updateCapture(state: SimState, dt: number): void {
     if (u.pos.distanceTo(p.pos) < CAPTURE.radius) near++
   }
 
-  if (near > 0 && (onFoot || state.playerSpeed < CAPTURE.slowSpeed)) {
+  if (state.power.shield > 0) {
+    // SHIELD: cannot be captured; bleed off any progress.
+    state.capture -= CAPTURE.recover * 2 * dt
+  } else if (near > 0 && (onFoot || state.playerSpeed < CAPTURE.slowSpeed)) {
     const mult = onFoot ? CAPTURE.onFootMultiplier : 1
     state.capture += CAPTURE.ratePerUnit * near * mult * dt
   } else {

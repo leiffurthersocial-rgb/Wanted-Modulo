@@ -8,6 +8,10 @@ import { emitFire, emitSmoke, spawnDebris, spawnExplosion } from './particles'
 /** Applies damage to a world/player vehicle, handling wreck + explosion. */
 export function damageWorldVehicle(state: SimState, v: VehicleEntity, amount: number): void {
   if (v.wrecked || amount <= 0) return
+  // SHIELD powerup makes the player's current vehicle invulnerable.
+  if (state.power.shield > 0 && state.player.mode === 'vehicle' && state.vehicles[state.player.vehicleIndex] === v) {
+    return
+  }
   v.health -= amount
   if (v.health <= 0) {
     v.health = 0

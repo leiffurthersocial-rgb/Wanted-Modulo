@@ -8,6 +8,7 @@
  */
 
 import { CITY_PITCH } from '@/config/constants'
+import { WORLD } from '@/config/world'
 
 function smooth(t: number): number {
   return t * t * (3 - 2 * t)
@@ -54,17 +55,42 @@ export function urbanization(x: number, z: number): number {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Biomes — large regions that recolour the land & foliage                    */
+/* -------------------------------------------------------------------------- */
+
+export type Biome = 'meadow' | 'desert' | 'tundra' | 'wetland'
+export const BIOMES: Biome[] = ['meadow', 'desert', 'tundra', 'wetland']
+
+/** Very low-frequency field -> a biome. Regions are large so you drive through
+ *  a desert or snowfield for a while before it changes. */
+export function biomeAt(x: number, z: number): Biome {
+  const n = fbm(x * 0.0016 + 200, z * 0.0016 - 120, 4)
+  if (n < 0.42) return 'meadow'
+  if (n < 0.62) return 'desert'
+  if (n < 0.8) return 'tundra'
+  return 'wetland'
+}
+
+/** Per-biome ground palette: [grassA, grassB, sand/bank]. Roads stay neutral. */
+export const BIOME_GROUND: Record<Biome, { a: string; b: string; bank: string }> = {
+  meadow: { a: '#6cc04f', b: '#5bb045', bank: '#dcc98e' },
+  desert: { a: '#e3c878', b: '#d8ba63', bank: '#e9d9a0' },
+  tundra: { a: '#e8eef2', b: '#d4dde4', bank: '#cdd6dd' },
+  wetland: { a: '#5aa86a', b: '#4f9a5e', bank: '#b9a877' },
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Rivers — straight, grid-aligned bands with right-angle corners            */
 /* -------------------------------------------------------------------------- */
 
 export const WATER_Y = -1.7
-const RIVER_DEPTH = 5
+const RIVER_DEPTH = WORLD.river.depth
 /** Spacing of the river lattice (world units). */
-const RIVER_GRID = 150
+const RIVER_GRID = WORLD.river.grid
 /** Half-width of a river channel. */
-const RIVER_HALFW = 7
+const RIVER_HALFW = WORLD.river.halfWidth
 /** Probability a lattice line carries a river. */
-const RIVER_P = 0.24
+const RIVER_P = WORLD.river.probability
 /** Keep the spawn plaza dry. */
 const SPAWN_CLEAR = CITY_PITCH * 1.5
 
@@ -127,15 +153,15 @@ export function waterDepth(x: number, z: number): number {
 /*  Bridges — sparse wooden crossings over the straight rivers                 */
 /* -------------------------------------------------------------------------- */
 
-export const BRIDGE_Y = 0.35
+export const BRIDGE_Y = WORLD.bridge.y
 /** Spacing of candidate bridge slots along a river. */
-const BRIDGE_SPACING = 165
+const BRIDGE_SPACING = WORLD.bridge.spacing
 /** Probability a candidate slot actually has a bridge (keeps them rare). */
-const BRIDGE_P = 0.5
+const BRIDGE_P = WORLD.bridge.probability
 /** Half-length of a bridge deck along the river. */
-const BRIDGE_HALF = 4.5
+const BRIDGE_HALF = WORLD.bridge.half
 /** Extra deck reach onto each bank. */
-const BRIDGE_APPROACH = 4
+const BRIDGE_APPROACH = WORLD.bridge.approach
 
 /** Internal: does a bridge span the vertical river at column i here? */
 function bridgeOnColumn(x: number, z: number): boolean {

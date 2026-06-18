@@ -2,8 +2,10 @@ import { DAMAGE, PLAYER } from '@/config/constants'
 import { dampAngle } from '@/core/math/angles'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision } from '@/game/sim/los'
+import { landmarkCollision } from '@/game/world/landmarkModel'
 import { isBridge, isWater, surfaceHeight, waterDepth } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+import { POWER } from './powerups'
 import { damageWorldVehicle, ejectPlayer } from './destruction'
 
 export interface StepInput {
@@ -99,13 +101,19 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
       player.pos.x += c.nx * c.depth
       player.pos.z += c.nz * c.depth
     }
+    const lc = landmarkCollision(player.pos.x, player.pos.z, FOOT_RADIUS)
+    if (lc.hit) {
+      player.pos.x += lc.nx * lc.depth
+      player.pos.z += lc.nz * lc.depth
+    }
   } else {
     const v = state.vehicles[player.vehicleIndex]
     const throttle = (input.forward ? 1 : 0) - (input.backward ? 1 : 0)
     const steer = (input.left ? 1 : 0) - (input.right ? 1 : 0)
     // Airborne when the body is meaningfully above the surface (ramp/ledge).
     const airborne = v.y > surfaceHeight(v.pos.x, v.pos.z) + 0.5
-    const { dx, dz } = stepVehicle(v.state, { throttle, steer, handbrake: input.handbrake }, v.def, dt)
+    const speedMult = state.power.boost > 0 ? POWER.nitroMult : 1
+    const { dx, dz } = stepVehicle(v.state, { throttle, steer, handbrake: input.handbrake }, v.def, dt, speedMult)
     v.pos.x += dx
     v.pos.z += dz
 
@@ -120,9 +128,23 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
         if (impact > DAMAGE.minImpactSpeed) {
           damageWorldVehicle(state, v, (impact - DAMAGE.minImpactSpeed) * DAMAGE.impactScale)
           v.squash = DAMAGE.impactSquash
+          state.shake = Math.max(state.shake, Math.min(1, (impact - DAMAGE.minImpactSpeed) / 22))
         }
         v.state.speed *= 0.25
         v.state.slip *= 0.25
+      }
+
+      const lc = landmarkCollision(v.pos.x, v.pos.z, radius)
+      if (lc.hit) {
+        v.pos.x += lc.nx * lc.depth
+        v.pos.z += lc.nz * lc.depth
+        const impact = Math.abs(v.state.speed)
+        if (impact > DAMAGE.minImpactSpeed) {
+          damageWorldVehicle(state, v, (impact - DAMAGE.minImpactSpeed) * DAMAGE.impactScale)
+          state.shake = Math.max(state.shake, Math.min(1, (impact - DAMAGE.minImpactSpeed) / 22))
+        }
+        v.state.speed *= 0.3
+        v.state.slip *= 0.3
       }
 
       // Rivers bog cars down; deep water dumps the driver out to swim — unless

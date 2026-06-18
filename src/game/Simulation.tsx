@@ -5,6 +5,7 @@ import type { CharacterId } from '@/types'
 import { CAMERA, HEAT, POLICE, SIM } from '@/config/constants'
 import { surfaceHeight, WATER_Y } from '@/game/world/terrain'
 import { Input } from '@/core/input/InputManager'
+import { rumble } from '@/core/input/Haptics'
 import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
 import { useFleetStore } from '@/state/useFleetStore'
@@ -36,6 +37,8 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const prevSpotted = useRef(false)
   const prevHeli = useRef(false)
   const prevExplosions = useRef(0)
+  const prevPickups = useRef(0)
+  const prevShake = useRef(0)
   const prevClasses = useRef<PoliceClassId[]>(useFleetStore.getState().policeClasses.slice())
 
   const sim = useMemo(() => createSimState(), [])
@@ -84,18 +87,26 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       : player.swimming
         ? WATER_Y
         : surfaceHeight(player.pos.x, player.pos.z)
+    // Settings: field of view + chase-camera distance.
+    const settings = useSettingsStore.getState()
+    const persp = camera as THREE.PerspectiveCamera
+    if (persp.isPerspectiveCamera && persp.fov !== settings.fov) {
+      persp.fov = settings.fov
+      persp.updateProjectionMatrix()
+    }
     // On foot the camera orbits with free-look; driving locks behind the car.
     const camHeading = inVehicle ? player.heading : look.yaw
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
     const pitch = inVehicle ? 0 : look.pitch
+    const camMul = settings.cameraDistance
     const fx = Math.sin(camHeading)
     const fz = Math.cos(camHeading)
-    const dist = cfg.distance * (1 - pitch * 0.35)
+    const dist = cfg.distance * camMul * (1 - pitch * 0.35)
     const desiredX = player.pos.x - fx * dist
     const desiredZ = player.pos.z - fz * dist
     const posT = 1 - Math.exp(-CAMERA.lerp * dt)
     camera.position.x += (desiredX - camera.position.x) * posT
-    camera.position.y += (py + cfg.height + pitch * 9 - camera.position.y) * posT
+    camera.position.y += (py + cfg.height * camMul + pitch * 9 - camera.position.y) * posT
     camera.position.z += (desiredZ - camera.position.z) * posT
     const lookT = 1 - Math.exp(-CAMERA.lookLerp * dt)
     lookTarget.current.x += (player.pos.x - lookTarget.current.x) * lookT
@@ -103,14 +114,21 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     lookTarget.current.z += (player.pos.z - lookTarget.current.z) * lookT
     camera.lookAt(lookTarget.current)
 
-    // --- Camera shake on impacts (gated by setting) ---
-    if (inVehicle && useSettingsStore.getState().cameraShake) {
-      const shake = sim.vehicles[player.vehicleIndex].squash
-      if (shake > 0.01) {
-        camera.position.x += (Math.random() - 0.5) * shake * 2.2
-        camera.position.y += (Math.random() - 0.5) * shake * 2.2
-      }
+    // --- Impact/landing shake + controller rumble (gated by settings) ---
+    const shake = sim.shake
+    if (shake > 0.01 && settings.cameraShake) {
+      camera.position.x += (Math.random() - 0.5) * shake * 3
+      camera.position.y += (Math.random() - 0.5) * shake * 3
     }
+    // Fire rumble on the rising edge of a fresh impact.
+    if (settings.rumble && shake > 0.25 && shake > prevShake.current + 0.12) {
+      rumble(shake, 120 + shake * 180)
+    }
+    prevShake.current = shake
+
+    // Publish locomotion for character animation.
+    Registry.playerSpeed = sim.playerSpeed
+    Registry.playerOnFoot = player.mode === 'foot'
 
     // --- Commit player + world vehicles ---
     if (playerRef.current) {
@@ -247,6 +265,10 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
         Audio.cue('explosion')
         prevExplosions.current = sim.explosions
       }
+      if (sim.pickups > prevPickups.current) {
+        Audio.cue('pickup')
+        prevPickups.current = sim.pickups
+      }
     }
 
     Input.lateUpdate()
@@ -321,5 +343,8 @@ function publishStats(
     policeCount,
     vehicleName: v ? v.def.name : null,
     vehicleHealth: v ? Math.max(0, v.health / v.def.durability) : 1,
+    powerBanner: sim.power.banner > 0 ? sim.power.lastKind : null,
+    boost: sim.power.boost,
+    shield: sim.power.shield,
   })
 }

@@ -10,7 +10,8 @@ import type { SimState } from '@/game/sim/state'
  * wheels never sink. Keeps the world feeling weighty without harsh snapping.
  */
 export function updateVehicleVertical(state: SimState, dt: number): void {
-  for (const v of state.vehicles) {
+  for (let i = 0; i < state.vehicles.length; i++) {
+    const v = state.vehicles[i]
     const ground = surfaceHeight(v.pos.x, v.pos.z)
     if (v.y < ground) {
       // Ground rose under us (uphill) — settle up smoothly, don't pop.
@@ -21,8 +22,14 @@ export function updateVehicleVertical(state: SimState, dt: number): void {
       v.vy = Math.max(-VEHICLE.maxFall, v.vy - VEHICLE.gravity * dt)
       v.y += v.vy * dt
       if (v.y <= ground) {
+        const impact = -v.vy
         v.y = ground
         v.vy = 0
+        // Landing thump shakes the camera/controller (player's car only).
+        if (i === state.player.vehicleIndex && impact > 5) {
+          state.shake = Math.max(state.shake, Math.min(1, (impact - 5) / 12))
+          v.squash = Math.max(v.squash, Math.min(0.22, impact * 0.012))
+        }
       }
     }
   }

@@ -9,6 +9,16 @@ interface SettingsStore {
   postProcessing: boolean
   weather: boolean
   cameraShake: boolean
+  /** Controller vibration on landings/crashes. */
+  rumble: boolean
+  /** Automatically lower quality when the frame rate drops. */
+  autoQuality: boolean
+  /** Show the radar minimap. */
+  minimap: boolean
+  /** Camera field of view (degrees). */
+  fov: number
+  /** Chase-camera distance multiplier. */
+  cameraDistance: number
   mobileControls: boolean
   musicVolume: number
   effectsVolume: number
@@ -31,6 +41,11 @@ export const useSettingsStore = create<SettingsStore>()(
       postProcessing: true,
       weather: true,
       cameraShake: true,
+      rumble: true,
+      autoQuality: true,
+      minimap: true,
+      fov: 60,
+      cameraDistance: 1,
       mobileControls: false,
       musicVolume: 0.7,
       effectsVolume: 0.8,

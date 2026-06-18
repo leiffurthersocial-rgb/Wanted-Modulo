@@ -1,6 +1,7 @@
 import { CITY_PITCH, PROPS } from '@/config/constants'
 import { buildingAtCell, mulberry32, worldToCell } from './cityModel'
 import { isWater, riverFactor, waterDirection } from './terrain'
+import { WORLD } from '@/config/world'
 import { PROP_TYPES, PROP_TYPE_LIST, type PropType } from './propCatalog'
 
 export interface PropInstance {
@@ -123,7 +124,7 @@ export function ensurePropWindow(px: number, pz: number): boolean {
 
   // --- Ramps: placed on riverbanks, facing the water, in modest numbers so the
   //     player can launch across rivers where there's no bridge. ---
-  const RAMP_SPACING = 11
+  const RAMP_SPACING = WORLD.ramp.spacing
   const rsX = Math.floor(minX / RAMP_SPACING) * RAMP_SPACING
   const rsZ = Math.floor(minZ / RAMP_SPACING) * RAMP_SPACING
   for (let x = rsX; x <= maxX; x += RAMP_SPACING) {
@@ -132,14 +133,14 @@ export function ensurePropWindow(px: number, pz: number): boolean {
       const dz = z - pz
       if (dx * dx + dz * dz > r2) continue
       if (counts.ramp >= PROP_CAPACITY) continue
-      const dir = waterDirection(x, z, 7)
+      const dir = waterDirection(x, z, WORLD.ramp.reach)
       if (!dir) continue
       // Sit a few units back from the bank so there's a run-up onto the ramp.
-      const bx = x - dir[0] * 5
-      const bz = z - dir[1] * 5
+      const bx = x - dir[0] * WORLD.ramp.setback
+      const bz = z - dir[1] * WORLD.ramp.setback
       if (isWater(bx, bz) || insideBuildingCell(bx, bz)) continue
       const rand = mulberry32(((bx * 19349663) ^ (bz * 83492791)) | 0)
-      if (rand() > 0.5) continue // ~half the eligible bank slots
+      if (rand() > WORLD.ramp.probability) continue
       const rot = Math.atan2(dir[0], dir[1]) // face the water
       props.push({ type: 'ramp', x: bx, z: bz, rot, typeIndex: counts.ramp++ })
     }

@@ -1,5 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 import type { CharacterDef, HairStyle } from '@/types'
+import { Registry } from '@/game/sim/registry'
 
 interface Props {
   def: CharacterDef
@@ -152,28 +155,47 @@ export function VoxelCharacter({ def }: Props) {
   const { shoeH, legH, torsoH, headSize, torsoBottom, legY, torsoY, headY, bodyW, legW, armW, legGap } = dims
   const armH = torsoH * 0.94
   const armX = bodyW / 2 + armW / 2 - 0.02
+  const shoulderY = torsoY + armH * 0.43
+
+  // Limb pivots for the walk cycle.
+  const lLeg = useRef<THREE.Group>(null)
+  const rLeg = useRef<THREE.Group>(null)
+  const lArm = useRef<THREE.Group>(null)
+  const rArm = useRef<THREE.Group>(null)
+  const phase = useRef(0)
+
+  useFrame((_, dt) => {
+    const onFoot = Registry.playerOnFoot
+    const spd = onFoot ? Registry.playerSpeed : 0
+    const moving = spd > 0.5
+    phase.current += spd * dt * 1.15
+    const amp = Math.min(0.95, spd * 0.13)
+    const swing = Math.sin(phase.current * 2) * amp
+    const decay = 1 - Math.min(1, dt * 8)
+    const set = (g: THREE.Group | null, target: number) => {
+      if (g) g.rotation.x = moving ? target : g.rotation.x * decay
+    }
+    set(lLeg.current, swing)
+    set(rLeg.current, -swing)
+    set(lArm.current, -swing * 0.85)
+    set(rArm.current, swing * 0.85)
+  })
 
   return (
     <group>
-      {/* Shoes */}
-      <mesh castShadow position={[-legGap, shoeH / 2, 0.06]}>
-        <boxGeometry args={[legW, shoeH, 0.42]} />
-        <meshStandardMaterial color={def.shoes} roughness={0.7} />
-      </mesh>
-      <mesh castShadow position={[legGap, shoeH / 2, 0.06]}>
-        <boxGeometry args={[legW, shoeH, 0.42]} />
-        <meshStandardMaterial color={def.shoes} roughness={0.7} />
-      </mesh>
-
-      {/* Legs */}
-      <mesh castShadow position={[-legGap, legY, 0]}>
-        <boxGeometry args={[legW, legH, 0.3]} />
-        <meshStandardMaterial color={def.pants} />
-      </mesh>
-      <mesh castShadow position={[legGap, legY, 0]}>
-        <boxGeometry args={[legW, legH, 0.3]} />
-        <meshStandardMaterial color={def.pants} />
-      </mesh>
+      {/* Legs (+ shoes) — pivot at the hip for the walk cycle */}
+      {([[-legGap, lLeg], [legGap, rLeg]] as const).map(([gx, ref], i) => (
+        <group key={i} ref={ref} position={[gx, torsoBottom, 0]}>
+          <mesh castShadow position={[0, legY - torsoBottom, 0]}>
+            <boxGeometry args={[legW, legH, 0.3]} />
+            <meshStandardMaterial color={def.pants} />
+          </mesh>
+          <mesh castShadow position={[0, shoeH / 2 - torsoBottom, 0.06]}>
+            <boxGeometry args={[legW, shoeH, 0.42]} />
+            <meshStandardMaterial color={def.shoes} roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
 
       {/* Belt */}
       <mesh castShadow position={[0, torsoBottom + 0.04, 0]}>
@@ -187,19 +209,19 @@ export function VoxelCharacter({ def }: Props) {
         <meshStandardMaterial color={def.shirt} roughness={0.7} />
       </mesh>
 
-      {/* Arms (skin sleeves below the shirt) */}
-      {[-1, 1].map((sgn) => (
-        <group key={sgn}>
-          <mesh castShadow position={[sgn * armX, torsoY + armH * 0.18, 0]}>
+      {/* Arms (skin sleeves below the shirt) — pivot at the shoulder */}
+      {([[-1, lArm], [1, rArm]] as const).map(([sgn, ref], i) => (
+        <group key={i} ref={ref} position={[sgn * armX, shoulderY, 0]}>
+          <mesh castShadow position={[0, torsoY + armH * 0.18 - shoulderY, 0]}>
             <boxGeometry args={[armW, armH * 0.5, 0.32]} />
             <meshStandardMaterial color={def.shirt} roughness={0.7} />
           </mesh>
-          <mesh castShadow position={[sgn * armX, torsoY - armH * 0.22, 0]}>
+          <mesh castShadow position={[0, torsoY - armH * 0.22 - shoulderY, 0]}>
             <boxGeometry args={[armW * 0.92, armH * 0.5, 0.3]} />
             <meshStandardMaterial color={def.skin} />
           </mesh>
           {/* Hand */}
-          <mesh castShadow position={[sgn * armX, torsoY - armH * 0.5, 0]}>
+          <mesh castShadow position={[0, torsoY - armH * 0.5 - shoulderY, 0]}>
             <boxGeometry args={[armW, 0.16, 0.32]} />
             <meshStandardMaterial color={def.skin} />
           </mesh>

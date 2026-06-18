@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { ALL_COLORS, streamBuildings, worldToCell } from './cityModel'
 import { getLightsTexture } from './textures'
 import { useGameStore } from '@/state/useGameStore'
+import { qualityScale } from '@/state/useQualityStore'
 import { Registry } from '@/game/sim/registry'
 
 /** How far buildings stream in around the player (a bit inside the fog). */
@@ -34,7 +35,7 @@ export function City() {
     const mesh = meshRef.current
     const roof = roofRef.current
     if (!mesh || !roof) return
-    const buildings = streamBuildings(cx, cz, RENDER_RADIUS)
+    const buildings = streamBuildings(cx, cz, RENDER_RADIUS * qualityScale())
     const n = Math.min(buildings.length, RENDER_CAP)
     const { m, q, pos, scale } = scratch
     for (let i = 0; i < n; i++) {

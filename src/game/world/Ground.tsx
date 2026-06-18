@@ -1,14 +1,11 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { riverFactor, sampleHeight, urbanization, WATER_Y } from './terrain'
+import { biomeAt, BIOME_GROUND, riverFactor, sampleHeight, urbanization, WATER_Y } from './terrain'
 import { useGameStore } from '@/state/useGameStore'
 
-const GRASS_A = new THREE.Color('#6cc04f')
-const GRASS_B = new THREE.Color('#5bb045')
 const ROAD_A = new THREE.Color('#525a6b')
 const ROAD_B = new THREE.Color('#474e5d')
-const SAND = new THREE.Color('#dcc98e')
 const tmp = new THREE.Color()
 
 /** Ground patch size — covers the visible range; recenters on the player. */
@@ -62,12 +59,13 @@ export function Ground() {
       const ccz = (tz + 0.5) * TILE
       const rf = riverFactor(ccx, ccz)
       const h = tileHash(tx, tz)
+      const pal = BIOME_GROUND[biomeAt(ccx, ccz)]
       if (rf > 0.1) {
-        tmp.copy(SAND)
+        tmp.set(pal.bank)
       } else if (urbanization(ccx, ccz) > 0.42) {
         tmp.copy(h < 0.5 ? ROAD_A : ROAD_B)
       } else {
-        tmp.copy(h < 0.5 ? GRASS_A : GRASS_B)
+        tmp.set(h < 0.5 ? pal.a : pal.b)
       }
       col.setXYZ(i, tmp.r, tmp.g, tmp.b)
     }
