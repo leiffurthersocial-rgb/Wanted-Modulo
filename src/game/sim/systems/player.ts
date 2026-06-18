@@ -2,7 +2,7 @@ import { DAMAGE, PLAYER } from '@/config/constants'
 import { dampAngle } from '@/core/math/angles'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision } from '@/game/sim/los'
-import { isWater, waterDepth } from '@/game/world/terrain'
+import { isBridge, isWater, waterDepth } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
 import { damageWorldVehicle, ejectPlayer } from './destruction'
 
@@ -13,6 +13,8 @@ export interface StepInput {
   right: boolean
   handbrake: boolean
   interactPressed: boolean
+  /** Camera yaw (radians) so on-foot movement is relative to where you look. */
+  lookYaw: number
 }
 
 const FOOT_RADIUS = 0.6
@@ -67,14 +69,20 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
   // --- Movement ---
   let speed = 0
   if (player.mode === 'foot') {
-    const swimming = isWater(player.pos.x, player.pos.z)
+    const swimming = isWater(player.pos.x, player.pos.z) && !isBridge(player.pos.x, player.pos.z)
     player.swimming = swimming
     const ix = (input.left ? 1 : 0) - (input.right ? 1 : 0)
     const iz = (input.forward ? 1 : 0) - (input.backward ? 1 : 0)
     const len = Math.hypot(ix, iz)
     if (len > 0) {
-      const nx = ix / len
-      const nz = iz / len
+      // Rotate the raw input by the camera yaw so "forward" is into the screen
+      // wherever the player has looked.
+      const c = Math.cos(input.lookYaw)
+      const s = Math.sin(input.lookYaw)
+      const rx = (ix / len) * c + (iz / len) * s
+      const rz = -(ix / len) * s + (iz / len) * c
+      const nx = rx
+      const nz = rz
       const moveSpeed = PLAYER.footSpeed * (swimming ? SWIM_MULT : 1)
       const step = moveSpeed * dt
       player.pos.x += nx * step
@@ -118,8 +126,9 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
         v.state.slip *= 0.25
       }
 
-      // Rivers bog cars down; deep water dumps the driver out to swim.
-      const depth = waterDepth(v.pos.x, v.pos.z)
+      // Rivers bog cars down; deep water dumps the driver out to swim — unless
+      // a bridge deck carries the car across.
+      const depth = isBridge(v.pos.x, v.pos.z) ? 0 : waterDepth(v.pos.x, v.pos.z)
       if (depth > 0) {
         v.state.speed *= 1 - Math.min(0.92, depth * 0.6)
         v.state.slip *= 0.5

@@ -107,7 +107,9 @@ export function HUD() {
 
       <Minimap />
 
-      <div className="hud-hint">WASD / Arrows · E steal / exit · ESC pause</div>
+      <div className="hud-hint">
+        WASD · {stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · ESC pause
+      </div>
     </div>
   )
 }

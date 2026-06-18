@@ -79,6 +79,7 @@ export function PropField() {
               args={[undefined, undefined, PROP_CAPACITY]}
               castShadow
               receiveShadow
+              frustumCulled={false}
               ref={(el) => {
                 bodyRefs.current[type] = el
                 Registry.props[type] = el
@@ -92,6 +93,7 @@ export function PropField() {
               <instancedMesh
                 args={[undefined, undefined, PROP_CAPACITY]}
                 castShadow
+                frustumCulled={false}
                 ref={(el) => {
                   capRefs.current[type] = el
                   Registry.propsCap[type] = el

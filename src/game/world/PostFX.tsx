@@ -12,12 +12,12 @@ export function PostFX() {
   return (
     <EffectComposer multisampling={2}>
       <Bloom
-        intensity={0.85}
-        luminanceThreshold={0.55}
-        luminanceSmoothing={0.25}
+        intensity={0.5}
+        luminanceThreshold={0.7}
+        luminanceSmoothing={0.3}
         mipmapBlur
       />
-      <Vignette offset={0.22} darkness={0.65} />
+      <Vignette offset={0.3} darkness={0.35} />
     </EffectComposer>
   )
 }

@@ -69,7 +69,13 @@ export function City() {
   })
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, RENDER_CAP]} castShadow receiveShadow>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, RENDER_CAP]}
+      castShadow
+      receiveShadow
+      frustumCulled={false}
+    >
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial
         ref={matRef}

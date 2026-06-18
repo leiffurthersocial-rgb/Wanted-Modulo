@@ -6,7 +6,7 @@ import { useSettingsStore } from '@/state/useSettingsStore'
 import { Registry } from '@/game/sim/registry'
 
 const DAY_LENGTH = 150 // seconds for a full day/night cycle
-const DAY_BG = new THREE.Color('#9ed0f0')
+const DAY_BG = new THREE.Color('#bfe3ff')
 const NIGHT_BG = new THREE.Color('#0a1022')
 const WARM = new THREE.Color('#ffd2a0')
 const COOL = new THREE.Color('#fff4e0')
@@ -51,8 +51,8 @@ export function Environment() {
       sun.color.copy(WARM).lerp(COOL, dayFactor)
     }
     // Bright, cheery fill so daytime reads like a stylized voxel toy world.
-    if (hemiRef.current) hemiRef.current.intensity = 0.5 + dayFactor * 0.9
-    if (ambientRef.current) ambientRef.current.intensity = 0.28 + dayFactor * 0.32
+    if (hemiRef.current) hemiRef.current.intensity = 0.7 + dayFactor * 1.0
+    if (ambientRef.current) ambientRef.current.intensity = 0.4 + dayFactor * 0.35
 
     tmpColor.copy(NIGHT_BG).lerp(DAY_BG, dayFactor)
     if (scene.background instanceof THREE.Color) scene.background.copy(tmpColor)

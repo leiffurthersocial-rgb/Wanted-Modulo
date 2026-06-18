@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { CharacterId } from '@/types'
 import { CAMERA, HEAT, POLICE, SIM } from '@/config/constants'
-import { sampleHeight, WATER_Y } from '@/game/world/terrain'
+import { surfaceHeight, WATER_Y } from '@/game/world/terrain'
 import { Input } from '@/core/input/InputManager'
 import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
@@ -54,6 +54,11 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       return
     }
 
+    const inVehicleNow = sim.player.mode === 'vehicle'
+    // While driving, relax free-look back to straight-behind.
+    if (inVehicleNow) Input.relaxLook(dt)
+    const look = Input.getLook()
+
     // --- Advance the simulation ---
     const snap = Input.snapshot()
     stepSim(
@@ -65,24 +70,28 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
         right: snap.right,
         handbrake: Input.isDown('handbrake'),
         interactPressed: Input.consumePressed('interact'),
+        lookYaw: inVehicleNow ? 0 : look.yaw,
       },
       dt,
     )
 
     const { player } = sim
 
-    // --- Chase camera (follows terrain height; floats on water when swimming) ---
-    const py = player.swimming ? WATER_Y : sampleHeight(player.pos.x, player.pos.z)
+    // --- Chase camera (follows the surface; floats on water when swimming) ---
+    const py = player.swimming ? WATER_Y : surfaceHeight(player.pos.x, player.pos.z)
     const inVehicle = player.mode === 'vehicle'
-    const camHeading = inVehicle ? player.heading : 0
+    // On foot the camera orbits with free-look; driving locks behind the car.
+    const camHeading = inVehicle ? player.heading : look.yaw
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
+    const pitch = inVehicle ? 0 : look.pitch
     const fx = Math.sin(camHeading)
     const fz = Math.cos(camHeading)
-    const desiredX = player.pos.x - fx * cfg.distance
-    const desiredZ = player.pos.z - fz * cfg.distance
+    const dist = cfg.distance * (1 - pitch * 0.35)
+    const desiredX = player.pos.x - fx * dist
+    const desiredZ = player.pos.z - fz * dist
     const posT = 1 - Math.exp(-CAMERA.lerp * dt)
     camera.position.x += (desiredX - camera.position.x) * posT
-    camera.position.y += (py + cfg.height - camera.position.y) * posT
+    camera.position.y += (py + cfg.height + pitch * 9 - camera.position.y) * posT
     camera.position.z += (desiredZ - camera.position.z) * posT
     const lookT = 1 - Math.exp(-CAMERA.lookLerp * dt)
     lookTarget.current.x += (player.pos.x - lookTarget.current.x) * lookT
@@ -114,7 +123,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
         ? Math.sin((1 - v.air / v.airTotal) * Math.PI) * 3.2
         : 0
       const driftYaw = Math.atan2(v.state.slip, Math.abs(v.state.speed) + 4) * 0.6
-      g.position.set(v.pos.x, sampleHeight(v.pos.x, v.pos.z) + arc, v.pos.z)
+      g.position.set(v.pos.x, surfaceHeight(v.pos.x, v.pos.z) + arc, v.pos.z)
       g.rotation.y = v.state.heading + driftYaw
       const sq = v.squash
       g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
@@ -127,7 +136,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const u = sim.police[i]
       if (u.active) {
         g.visible = true
-        g.position.set(u.pos.x, sampleHeight(u.pos.x, u.pos.z), u.pos.z)
+        g.position.set(u.pos.x, surfaceHeight(u.pos.x, u.pos.z), u.pos.z)
         g.rotation.y = u.state.heading
       } else {
         g.visible = false
@@ -141,7 +150,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const h = sim.helis[i]
       if (h.active) {
         g.visible = true
-        g.position.set(h.pos.x, sampleHeight(h.pos.x, h.pos.z) + POLICE.heliHeight, h.pos.z)
+        g.position.set(h.pos.x, surfaceHeight(h.pos.x, h.pos.z) + POLICE.heliHeight, h.pos.z)
         g.rotation.y = h.heading
         const rotor = Registry.heliRotors[i]
         if (rotor) rotor.rotation.y += 40 * dt

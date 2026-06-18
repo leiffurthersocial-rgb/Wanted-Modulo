@@ -6,6 +6,8 @@
  * world no matter how far the player travels.
  */
 
+import { CITY_PITCH } from '@/config/constants'
+
 function hash(ix: number, iz: number, seed: number): number {
   let h = (ix * 374761393 + iz * 668265263 + seed * 2654435761) | 0
   h = (Math.imul(h ^ (h >>> 13), 1274126177)) | 0
@@ -84,4 +86,51 @@ export function isWater(x: number, z: number): boolean {
 export function waterDepth(x: number, z: number): number {
   const h = sampleHeight(x, z)
   return h < WATER_Y ? WATER_Y - h : 0
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Roads & bridges                                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Half-width (world units) of a drivable road corridor / bridge deck. */
+const ROAD_HALF = 5
+/** Bridge deck height — sits just above the plains so approaches are seamless. */
+export const BRIDGE_Y = 0.3
+
+/** Distance to the nearest road centerline running along Z (vertical road). */
+function distRoadX(x: number): number {
+  const n = Math.round(x / CITY_PITCH - 0.5)
+  return Math.abs(x - (n + 0.5) * CITY_PITCH)
+}
+
+/** Distance to the nearest road centerline running along X (horizontal road). */
+function distRoadZ(z: number): number {
+  const n = Math.round(z / CITY_PITCH - 0.5)
+  return Math.abs(z - (n + 0.5) * CITY_PITCH)
+}
+
+/**
+ * True where a road corridor crosses a river — i.e. where a drivable bridge
+ * deck spans the water. Deterministic, so the renderer, collision and the
+ * height query all agree on exactly where you can drive across.
+ */
+export function isBridge(x: number, z: number): boolean {
+  if (riverFactor(x, z) <= 0.06) return false
+  return distRoadX(x) < ROAD_HALF || distRoadZ(z) < ROAD_HALF
+}
+
+/** True when the bridge here runs along Z (a vertical road) — its railings sit
+ *  on the X edges. Used by the bridge renderer to place side posts only. */
+export function bridgeRunsAlongZ(x: number, z: number): boolean {
+  return distRoadX(x) <= distRoadZ(z)
+}
+
+/**
+ * The drivable surface height at a point: the bridge deck where one spans a
+ * river, otherwise the terrain. Vehicles, the player and the camera follow
+ * this so cars roll straight across bridges instead of plunging into the river.
+ */
+export function surfaceHeight(x: number, z: number): number {
+  if (isBridge(x, z)) return BRIDGE_Y
+  return sampleHeight(x, z)
 }

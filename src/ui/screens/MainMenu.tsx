@@ -35,7 +35,7 @@ export function MainMenu() {
       )}
 
       <div className="muted" style={{ position: 'absolute', bottom: 18 }}>
-        Phase 4 prototype · police pursuit &amp; destruction arriving in later phases
+        Drive, drift and survive an endless voxel city · drag to look around on foot
       </div>
     </div>
   )

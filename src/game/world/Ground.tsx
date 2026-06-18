@@ -68,10 +68,10 @@ export function Ground() {
 
   return (
     <group>
-      <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={1} metalness={0} />
       </mesh>
-      <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]} frustumCulled={false}>
         <planeGeometry args={[SIZE, SIZE]} />
         <meshStandardMaterial
           color="#2f6fb0"

@@ -6,6 +6,7 @@ import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { City } from '@/game/world/City'
 import { Ground } from '@/game/world/Ground'
+import { Bridges } from '@/game/world/Bridges'
 import { Environment } from '@/game/world/Environment'
 import { PostFX } from '@/game/world/PostFX'
 import { Simulation } from '@/game/Simulation'
@@ -59,11 +60,12 @@ export function Game() {
       camera={{ position: [0, 9, -13], fov: 60, near: 0.1, far: 1000 }}
       gl={{ antialias: graphics !== 'low', powerPreference: 'high-performance' }}
     >
-      <color attach="background" args={['#aac4e6']} />
-      <fog attach="fog" args={['#aac4e6', 110, 380]} />
+      <color attach="background" args={['#bfe3ff']} />
+      <fog attach="fog" args={['#cdeaff', 150, 420]} />
       <Suspense fallback={null}>
         <Environment />
         <Ground />
+        <Bridges />
         <City />
         <PropField />
         <Simulation characterId={character} />

@@ -27,11 +27,22 @@ class InputManagerImpl {
   private virtualPressed = new Set<InputAction>()
   private attached = false
 
+  /** Free-look camera orbit (radians), driven by pointer drag. */
+  private lookYaw = 0
+  private lookPitch = 0.2
+  private dragging = false
+  private lastX = 0
+  private lastY = 0
+
   attach(): void {
     if (this.attached || typeof window === 'undefined') return
     window.addEventListener('keydown', this.onKeyDown)
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('blur', this.onBlur)
+    window.addEventListener('pointerdown', this.onPointerDown)
+    window.addEventListener('pointermove', this.onPointerMove)
+    window.addEventListener('pointerup', this.onPointerUp)
+    window.addEventListener('pointercancel', this.onPointerUp)
     this.attached = true
   }
 
@@ -40,9 +51,27 @@ class InputManagerImpl {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     window.removeEventListener('blur', this.onBlur)
+    window.removeEventListener('pointerdown', this.onPointerDown)
+    window.removeEventListener('pointermove', this.onPointerMove)
+    window.removeEventListener('pointerup', this.onPointerUp)
+    window.removeEventListener('pointercancel', this.onPointerUp)
     this.held.clear()
     this.justPressed.clear()
+    this.dragging = false
     this.attached = false
+  }
+
+  /** Current free-look orbit, consumed by the chase camera on foot. */
+  getLook(): { yaw: number; pitch: number } {
+    return { yaw: this.lookYaw, pitch: this.lookPitch }
+  }
+
+  /** Smoothly relax the look back toward straight-behind (used while driving). */
+  relaxLook(dt: number): void {
+    if (this.dragging) return
+    const t = 1 - Math.exp(-3 * dt)
+    this.lookYaw += (0 - this.lookYaw) * t
+    this.lookPitch += (0.2 - this.lookPitch) * t
   }
 
   setBindings(bindings: Record<InputAction, string[]>): void {
@@ -117,6 +146,30 @@ class InputManagerImpl {
   private onBlur = (): void => {
     this.held.clear()
     this.justPressed.clear()
+    this.dragging = false
+  }
+
+  private onPointerDown = (e: PointerEvent): void => {
+    // Ignore drags that start on UI controls (buttons, touch stick, etc.).
+    const target = e.target as HTMLElement | null
+    if (target && target.closest('button, .touch-stick, .touch-btn, .screen, .panel')) return
+    this.dragging = true
+    this.lastX = e.clientX
+    this.lastY = e.clientY
+  }
+
+  private onPointerMove = (e: PointerEvent): void => {
+    if (!this.dragging) return
+    const dx = e.clientX - this.lastX
+    const dy = e.clientY - this.lastY
+    this.lastX = e.clientX
+    this.lastY = e.clientY
+    this.lookYaw -= dx * 0.006
+    this.lookPitch = Math.max(-0.25, Math.min(0.95, this.lookPitch + dy * 0.004))
+  }
+
+  private onPointerUp = (): void => {
+    this.dragging = false
   }
 
   private isBoundCode(code: string): boolean {

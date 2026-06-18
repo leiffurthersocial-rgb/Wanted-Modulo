@@ -1,0 +1,95 @@
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
+import { isBridge, bridgeRunsAlongZ, BRIDGE_Y } from './terrain'
+import { worldToCell } from './cityModel'
+import { useGameStore } from '@/state/useGameStore'
+
+const TILE = 2.6
+const RADIUS = 150
+const DECK_CAP = 2600
+const POST_CAP = 1600
+
+/**
+ * Streaming bridge decks: where a road corridor crosses a river, a flat voxel
+ * deck (with chunky side posts) is laid so cars can drive straight across. Like
+ * the city, the deck/post instances refill whenever the player crosses a grid
+ * cell, keeping it consistent across the infinite world. Decks are cosmetic —
+ * the drivable surface comes from terrain.surfaceHeight().
+ */
+export function Bridges() {
+  const deckRef = useRef<THREE.InstancedMesh>(null)
+  const postRef = useRef<THREE.InstancedMesh>(null)
+  const lastCell = useRef({ i: NaN, j: NaN })
+  const scratch = useMemo(
+    () => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), pos: new THREE.Vector3(), scl: new THREE.Vector3(1, 1, 1) }),
+    [],
+  )
+
+  const rebuild = (cx: number, cz: number) => {
+    const deck = deckRef.current
+    const post = postRef.current
+    if (!deck || !post) return
+    const { m, q, pos, scl } = scratch
+    let d = 0
+    let p = 0
+    const startX = Math.floor((cx - RADIUS) / TILE) * TILE
+    const startZ = Math.floor((cz - RADIUS) / TILE) * TILE
+    for (let x = startX; x <= cx + RADIUS; x += TILE) {
+      for (let z = startZ; z <= cz + RADIUS; z += TILE) {
+        const dx = x - cx
+        const dz = z - cz
+        if (dx * dx + dz * dz > RADIUS * RADIUS) continue
+        if (!isBridge(x, z)) continue
+        if (d < DECK_CAP) {
+          pos.set(x, BRIDGE_Y - 0.25, z)
+          m.compose(pos, q, scl)
+          deck.setMatrixAt(d++, m)
+        }
+        // Chunky safety posts along the lateral edges (never across the entrance).
+        const alongZ = bridgeRunsAlongZ(x, z)
+        const edge = alongZ
+          ? !isBridge(x + TILE, z) || !isBridge(x - TILE, z)
+          : !isBridge(x, z + TILE) || !isBridge(x, z - TILE)
+        if (edge && p < POST_CAP) {
+          pos.set(x, BRIDGE_Y + 0.45, z)
+          m.compose(pos, q, scl)
+          post.setMatrixAt(p++, m)
+        }
+      }
+    }
+    deck.count = d
+    post.count = p
+    deck.instanceMatrix.needsUpdate = true
+    post.instanceMatrix.needsUpdate = true
+  }
+
+  useLayoutEffect(() => {
+    rebuild(0, 0)
+    lastCell.current = { i: 0, j: 0 }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useFrame(() => {
+    const { px, pz } = useGameStore.getState().radar
+    const ci = worldToCell(px)
+    const cj = worldToCell(pz)
+    if (ci !== lastCell.current.i || cj !== lastCell.current.j) {
+      lastCell.current = { i: ci, j: cj }
+      rebuild(px, pz)
+    }
+  })
+
+  return (
+    <group>
+      <instancedMesh ref={deckRef} args={[undefined, undefined, DECK_CAP]} receiveShadow castShadow frustumCulled={false}>
+        <boxGeometry args={[TILE, 0.5, TILE]} />
+        <meshStandardMaterial color="#c2c7d2" roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={postRef} args={[undefined, undefined, POST_CAP]} castShadow frustumCulled={false}>
+        <boxGeometry args={[0.5, 1.4, 0.5]} />
+        <meshStandardMaterial color="#e8a83a" roughness={0.7} />
+      </instancedMesh>
+    </group>
+  )
+}
