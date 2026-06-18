@@ -3,7 +3,7 @@ import { angleDelta, clamp } from '@/core/math/angles'
 import { POLICE_CLASSES, type PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision, losBlocked } from '@/game/sim/los'
-import { sampleHeight } from '@/game/world/terrain'
+import { isWater, sampleHeight } from '@/game/world/terrain'
 import { tierFor, type HeatTier } from '@/game/sim/heatTable'
 import { damageTier, type PoliceUnit, type SimState } from '@/game/sim/state'
 import { damageWorldVehicle } from './destruction'
@@ -93,6 +93,7 @@ function activate(
   // Face the player.
   u.state.heading = Math.atan2(state.player.pos.x - x, state.player.pos.z - z)
   u.state.speed = 0
+  u.state.slip = 0
   u.health = cls.def.durability
   u.ai = block ? 'block' : 'pursue'
   u.blockUntilNear = block
@@ -108,7 +109,7 @@ function findSpawnPoint(state: SimState, radius: number): [number, number] {
     const a = state.rand() * Math.PI * 2
     const x = p.x + Math.cos(a) * radius
     const z = p.z + Math.sin(a) * radius
-    if (!buildingCollision(x, z, 2.5).hit) return [x, z]
+    if (!buildingCollision(x, z, 2.5).hit && !isWater(x, z)) return [x, z]
   }
   return [p.x + radius, p.z]
 }

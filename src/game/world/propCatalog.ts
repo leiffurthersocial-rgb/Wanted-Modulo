@@ -6,6 +6,7 @@ export type PropType =
   | 'bench'
   | 'sign'
   | 'barrier'
+  | 'ramp'
 
 export interface PropPart {
   size: [number, number, number]
@@ -28,6 +29,10 @@ export interface PropTypeDef {
   debrisCount: number
   /** Relative spawn weight. */
   weight: number
+  /** Survives ramming (terrain feature, not debris). */
+  indestructible?: boolean
+  /** Hitting this at speed in a vehicle launches it into the air. */
+  launch?: boolean
 }
 
 export const PROP_TYPES: Record<PropType, PropTypeDef> = {
@@ -89,6 +94,18 @@ export const PROP_TYPES: Record<PropType, PropTypeDef> = {
     debrisColor: '#ff7a1a',
     debrisCount: 10,
     weight: 1.0,
+  },
+  ramp: {
+    // Stacked voxel wedge — a stunt ramp that launches cars at speed.
+    body: { size: [4.4, 0.6, 3.2], y: 0.3, color: '#f2c14e' },
+    cap: { size: [4.4, 0.6, 1.6], y: 0.9, color: '#e8a83a' },
+    type: 'ramp',
+    radius: 2.2,
+    debrisColor: '#f2c14e',
+    debrisCount: 0,
+    weight: 0.5,
+    indestructible: true,
+    launch: true,
   },
 }
 

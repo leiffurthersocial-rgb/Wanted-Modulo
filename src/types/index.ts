@@ -16,12 +16,22 @@ export type InputAction =
   | 'backward'
   | 'left'
   | 'right'
+  | 'handbrake'
   | 'interact'
   | 'pause'
 
-export type CharacterId = 'robin' | 'leif' | 'jovan' | 'leo'
+export type CharacterId =
+  | 'robin'
+  | 'leif'
+  | 'jovan'
+  | 'leo'
+  | 'till'
+  | 'tusya'
+  | 'lennard'
+  | 'erim'
+  | 'david'
 
-export type HairStyle = 'ponytail' | 'messy' | 'short' | 'buzz'
+export type HairStyle = 'ponytail' | 'messy' | 'short' | 'buzz' | 'side' | 'long'
 
 export interface CharacterDef {
   id: CharacterId
@@ -38,6 +48,9 @@ export interface CharacterDef {
   /** Build modifiers (purely visual). */
   height: number
   width: number
+  /** Optional cosmetic accessories. */
+  glasses?: boolean
+  beard?: boolean
 }
 
 export type VehicleCategory =

@@ -1,33 +1,12 @@
-import { getCity, type Building } from '@/game/world/cityModel'
+import { buildingAtCell, worldToCell, type Building } from '@/game/world/cityModel'
 
 /**
- * Spatial queries against the city, used by AI line-of-sight and by collision
- * resolution. Buildings are bucketed by block cell for O(1) point lookups.
+ * Spatial queries against the INFINITE city. Buildings are generated on demand
+ * per grid cell (no global array), so line-of-sight and collision work the same
+ * however far the player travels.
  */
-let cellMap: Map<number, Building> | null = null
-let cols = 0
-let half = 0
-let pitch = 1
-
-function ensureMap(): void {
-  if (cellMap) return
-  const city = getCity()
-  cols = city.cols
-  half = city.half
-  pitch = city.pitch
-  cellMap = new Map()
-  for (const b of city.buildings) {
-    const i = Math.round(b.x / pitch + half)
-    const j = Math.round(b.z / pitch + half)
-    cellMap.set(i * cols + j, b)
-  }
-}
-
-function buildingAt(x: number, z: number): Building | undefined {
-  const i = Math.round(x / pitch + half)
-  const j = Math.round(z / pitch + half)
-  if (i < 0 || j < 0 || i >= cols || j >= cols) return undefined
-  return cellMap!.get(i * cols + j)
+function buildingAt(x: number, z: number): Building | null {
+  return buildingAtCell(worldToCell(x), worldToCell(z))
 }
 
 function pointInBuilding(x: number, z: number): boolean {
@@ -38,7 +17,6 @@ function pointInBuilding(x: number, z: number): boolean {
 
 /** True if a building blocks the straight line between two points. */
 export function losBlocked(ax: number, az: number, bx: number, bz: number): boolean {
-  ensureMap()
   const dx = bx - ax
   const dz = bz - az
   const dist = Math.hypot(dx, dz)
@@ -65,13 +43,12 @@ const noHit: CollisionResult = { hit: false, nx: 0, nz: 0, depth: 0 }
  * caller can separate the entity and kill inbound velocity.
  */
 export function buildingCollision(x: number, z: number, radius: number): CollisionResult {
-  ensureMap()
-  const ci = Math.round(x / pitch + half)
-  const cj = Math.round(z / pitch + half)
+  const ci = worldToCell(x)
+  const cj = worldToCell(z)
   let result = noHit
   for (let di = -1; di <= 1; di++) {
     for (let dj = -1; dj <= 1; dj++) {
-      const b = cellMap!.get((ci + di) * cols + (cj + dj))
+      const b = buildingAtCell(ci + di, cj + dj)
       if (!b) continue
       const hw = b.w / 2
       const hd = b.d / 2

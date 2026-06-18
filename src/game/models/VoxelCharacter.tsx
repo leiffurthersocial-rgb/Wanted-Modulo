@@ -56,6 +56,46 @@ function Hair({ style, color, headY, headSize }: {
           </mesh>
         </group>
       )
+    case 'side':
+      // Short hair with a swept side part.
+      return (
+        <group>
+          <mesh castShadow position={[0, top, 0]}>
+            <boxGeometry args={[s * 1.06, s * 0.36, s * 1.06]} />
+            <meshStandardMaterial color={color} roughness={0.8} />
+          </mesh>
+          <mesh castShadow position={[-s * 0.36, top + s * 0.04, s * 0.2]}>
+            <boxGeometry args={[s * 0.4, s * 0.3, s * 0.7]} />
+            <meshStandardMaterial color={color} roughness={0.8} />
+          </mesh>
+          <mesh castShadow position={[0, headY + s * 0.1, -s * 0.48]}>
+            <boxGeometry args={[s * 1.06, s * 0.7, s * 0.16]} />
+            <meshStandardMaterial color={color} roughness={0.8} />
+          </mesh>
+        </group>
+      )
+    case 'long':
+      // Full hair falling past the shoulders.
+      return (
+        <group>
+          <mesh castShadow position={[0, top, 0]}>
+            <boxGeometry args={[s * 1.1, s * 0.4, s * 1.1]} />
+            <meshStandardMaterial color={color} roughness={0.82} />
+          </mesh>
+          {/* sides */}
+          {[-1, 1].map((sgn) => (
+            <mesh key={sgn} castShadow position={[sgn * s * 0.56, headY - s * 0.2, -s * 0.06]}>
+              <boxGeometry args={[s * 0.18, s * 1.2, s * 1.0]} />
+              <meshStandardMaterial color={color} roughness={0.82} />
+            </mesh>
+          ))}
+          {/* back fall */}
+          <mesh castShadow position={[0, headY - s * 0.35, -s * 0.56]}>
+            <boxGeometry args={[s * 1.1, s * 1.5, s * 0.2]} />
+            <meshStandardMaterial color={color} roughness={0.82} />
+          </mesh>
+        </group>
+      )
     case 'ponytail':
     default:
       return (
@@ -200,6 +240,38 @@ export function VoxelCharacter({ def }: Props) {
         <boxGeometry args={[0.14, 0.03, 0.04]} />
         <meshStandardMaterial color="#9b5b4d" />
       </mesh>
+
+      {/* Beard (jaw + chin) */}
+      {def.beard && (
+        <group>
+          <mesh castShadow position={[0, headY - headSize * 0.34, headSize * 0.36]}>
+            <boxGeometry args={[headSize * 0.92, headSize * 0.42, headSize * 0.34]} />
+            <meshStandardMaterial color={def.hair} roughness={0.95} />
+          </mesh>
+          {[-1, 1].map((sgn) => (
+            <mesh key={sgn} castShadow position={[sgn * headSize * 0.42, headY - headSize * 0.12, headSize * 0.18]}>
+              <boxGeometry args={[headSize * 0.16, headSize * 0.5, headSize * 0.5]} />
+              <meshStandardMaterial color={def.hair} roughness={0.95} />
+            </mesh>
+          ))}
+        </group>
+      )}
+
+      {/* Glasses (frames + bridge) */}
+      {def.glasses && (
+        <group>
+          {[-1, 1].map((sgn) => (
+            <mesh key={sgn} position={[sgn * headSize * 0.2, headY + headSize * 0.06, headSize * 0.52]}>
+              <boxGeometry args={[0.16, 0.16, 0.04]} />
+              <meshStandardMaterial color="#15171c" roughness={0.4} />
+            </mesh>
+          ))}
+          <mesh position={[0, headY + headSize * 0.06, headSize * 0.52]}>
+            <boxGeometry args={[0.12, 0.04, 0.03]} />
+            <meshStandardMaterial color="#15171c" roughness={0.4} />
+          </mesh>
+        </group>
+      )}
     </group>
   )
 }

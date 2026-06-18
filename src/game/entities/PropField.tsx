@@ -1,26 +1,45 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { getProps } from '@/game/world/propModel'
+import { getProps, propVersion, PROP_CAPACITY } from '@/game/world/propModel'
 import { sampleHeight } from '@/game/world/terrain'
 import { PROP_TYPES, PROP_TYPE_LIST, type PropType } from '@/game/world/propCatalog'
 import { Registry } from '@/game/sim/registry'
 
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0)
+
 /**
- * Destructible props rendered as one InstancedMesh per type (+ an optional
- * "cap" mesh for lamp heads / foliage). The simulation hides destroyed props by
- * zeroing their instance matrices via the Registry.
+ * Destructible props for the infinite world: one InstancedMesh per type at fixed
+ * `PROP_CAPACITY`, refilled whenever the streaming prop window regenerates
+ * (propVersion changes). The simulation hides smashed props by zeroing their
+ * matrices via the Registry between regenerations.
  */
 export function PropField() {
-  const { props, counts } = useMemo(() => getProps(), [])
   const bodyRefs = useRef<Partial<Record<PropType, THREE.InstancedMesh | null>>>({})
   const capRefs = useRef<Partial<Record<PropType, THREE.InstancedMesh | null>>>({})
+  const lastVersion = useRef(-1)
 
-  useLayoutEffect(() => {
-    const m = new THREE.Matrix4()
-    const q = new THREE.Quaternion()
-    const pos = new THREE.Vector3()
-    const scl = new THREE.Vector3(1, 1, 1)
-    const yAxis = new THREE.Vector3(0, 1, 0)
+  const scratch = useMemo(
+    () => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), pos: new THREE.Vector3(), scl: new THREE.Vector3(1, 1, 1), yAxis: new THREE.Vector3(0, 1, 0) }),
+    [],
+  )
+
+  useFrame(() => {
+    const v = propVersion()
+    if (v === lastVersion.current) return
+    lastVersion.current = v
+    const { props } = getProps()
+    const { m, q, pos, scl, yAxis } = scratch
+
+    // Clear every slot, then place the active window's props.
+    for (const type of PROP_TYPE_LIST) {
+      const b = bodyRefs.current[type]
+      const c = capRefs.current[type]
+      for (let i = 0; i < PROP_CAPACITY; i++) {
+        if (b) b.setMatrixAt(i, ZERO)
+        if (c) c.setMatrixAt(i, ZERO)
+      }
+    }
 
     for (const prop of props) {
       const tdef = PROP_TYPES[prop.type]
@@ -48,18 +67,16 @@ export function PropField() {
       const c = capRefs.current[type]
       if (c) c.instanceMatrix.needsUpdate = true
     }
-  }, [props])
+  })
 
   return (
     <>
       {PROP_TYPE_LIST.map((type) => {
-        const count = counts[type]
-        if (!count) return null
         const tdef = PROP_TYPES[type]
         return (
           <group key={type}>
             <instancedMesh
-              args={[undefined, undefined, count]}
+              args={[undefined, undefined, PROP_CAPACITY]}
               castShadow
               receiveShadow
               ref={(el) => {
@@ -73,7 +90,7 @@ export function PropField() {
 
             {tdef.cap && (
               <instancedMesh
-                args={[undefined, undefined, count]}
+                args={[undefined, undefined, PROP_CAPACITY]}
                 castShadow
                 ref={(el) => {
                   capRefs.current[type] = el

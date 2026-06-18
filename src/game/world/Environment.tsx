@@ -1,7 +1,6 @@
 import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { CITY, CITY_PITCH } from '@/config/constants'
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { Registry } from '@/game/sim/registry'
@@ -27,11 +26,15 @@ export function Environment() {
   const hemiRef = useRef<THREE.HemisphereLight>(null)
   const ambientRef = useRef<THREE.AmbientLight>(null)
 
-  const extent = CITY.blocks * CITY_PITCH
+  // Shadow frustum extent — kept tight around the player for crisp shadows in
+  // the infinite world (the sun + its target track the player every frame).
+  const extent = 220
   const shadowSize = graphics === 'ultra' ? 4096 : graphics === 'high' ? 2048 : 1024
 
   useFrame(() => {
-    const time = useGameStore.getState().stats.time
+    const game = useGameStore.getState()
+    const time = game.stats.time
+    const { px, pz } = game.radar
     const phase = (time / DAY_LENGTH + 0.2) % 1
     const ang = phase * Math.PI * 2
     const ele = Math.sin(ang)
@@ -40,7 +43,10 @@ export function Environment() {
 
     const sun = sunRef.current
     if (sun) {
-      sun.position.set(Math.cos(ang) * 90, Math.max(6, 20 + ele * 80), Math.sin(ang) * 90)
+      // Position the sun relative to the player so shadows render everywhere.
+      sun.position.set(px + Math.cos(ang) * 90, Math.max(6, 20 + ele * 80), pz + Math.sin(ang) * 90)
+      sun.target.position.set(px, 0, pz)
+      sun.target.updateMatrixWorld()
       sun.intensity = 0.25 + dayFactor * 1.5
       sun.color.copy(WARM).lerp(COOL, dayFactor)
     }

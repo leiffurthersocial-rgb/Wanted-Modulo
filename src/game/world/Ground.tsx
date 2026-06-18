@@ -1,46 +1,86 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { getCity } from './cityModel'
-import { sampleHeight, urbanization } from './terrain'
+import { riverFactor, sampleHeight, urbanization, WATER_Y } from './terrain'
+import { useGameStore } from '@/state/useGameStore'
 
-const GRASS = new THREE.Color('#5aa84a')
+const GRASS = new THREE.Color('#5fb04e')
 const ASPHALT = new THREE.Color('#3c4250')
+const SAND = new THREE.Color('#d8c48c')
 const tmp = new THREE.Color()
 
+/** Ground patch size — covers the visible range; recenters on the player. */
+const SIZE = 580
+const SEG = 144
+/** Player travel before the ground resamples (snapped to a grid step). */
+const STEP = SIZE / SEG // ~4 units
+
 /**
- * One displaced, vertex-coloured ground mesh covering the whole world. Height
- * follows the terrain field; colour blends grass (plains) to asphalt (city) by
- * urbanization, so paved streets and open country read clearly without tiled
- * road textures (which never lined up with the grid).
+ * Infinite ground: one displaced, vertex-coloured patch that follows the player
+ * and resamples terrain height + colour whenever they cross a grid step, so the
+ * world extends forever. Colour blends grass (plains) → asphalt (city) → sand
+ * (river banks). A translucent water plane fills the carved river channels.
  */
 export function Ground() {
-  const city = useMemo(() => getCity(), [])
+  const meshRef = useRef<THREE.Mesh>(null)
+  const waterRef = useRef<THREE.Mesh>(null)
+  const center = useRef({ x: NaN, z: NaN })
 
   const geometry = useMemo(() => {
-    const size = city.groundSize
-    const seg = 180
-    const geo = new THREE.PlaneGeometry(size, size, seg, seg)
-    const pos = geo.attributes.position as THREE.BufferAttribute
-    const colors = new Float32Array(pos.count * 3)
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
-      const y = pos.getY(i)
-      const wz = -y // after the -90° X rotation, local +Y maps to world -Z
-      pos.setZ(i, sampleHeight(x, wz))
-      const u = urbanization(x, wz)
-      tmp.copy(GRASS).lerp(ASPHALT, THREE.MathUtils.clamp((u - 0.25) * 2.4, 0, 1))
-      colors[i * 3] = tmp.r
-      colors[i * 3 + 1] = tmp.g
-      colors[i * 3 + 2] = tmp.b
-    }
+    const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG)
+    const colors = new Float32Array((geo.attributes.position as THREE.BufferAttribute).count * 3)
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    geo.computeVertexNormals()
     return geo
-  }, [city])
+  }, [])
+
+  const resample = (cx: number, cz: number) => {
+    const geo = geometry
+    const pos = geo.attributes.position as THREE.BufferAttribute
+    const col = geo.attributes.color as THREE.BufferAttribute
+    for (let i = 0; i < pos.count; i++) {
+      const lx = pos.getX(i)
+      const ly = pos.getY(i)
+      const wx = cx + lx
+      const wz = cz - ly // after -90° X rotation, local +Y -> world -Z
+      pos.setZ(i, sampleHeight(wx, wz))
+      const u = urbanization(wx, wz)
+      tmp.copy(GRASS).lerp(ASPHALT, THREE.MathUtils.clamp((u - 0.25) * 2.4, 0, 1))
+      const rf = riverFactor(wx, wz)
+      if (rf > 0.06) tmp.lerp(SAND, THREE.MathUtils.clamp((rf - 0.06) * 6, 0, 1))
+      col.setXYZ(i, tmp.r, tmp.g, tmp.b)
+    }
+    pos.needsUpdate = true
+    col.needsUpdate = true
+    geo.computeVertexNormals()
+  }
+
+  useFrame(() => {
+    const { px, pz } = useGameStore.getState().radar
+    const sx = Math.round(px / STEP) * STEP
+    const sz = Math.round(pz / STEP) * STEP
+    if (sx !== center.current.x || sz !== center.current.z) {
+      center.current = { x: sx, z: sz }
+      resample(sx, sz)
+      if (meshRef.current) meshRef.current.position.set(sx, 0, sz)
+    }
+    if (waterRef.current) waterRef.current.position.set(px, WATER_Y, pz)
+  })
 
   return (
-    <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <meshStandardMaterial vertexColors roughness={1} metalness={0} />
-    </mesh>
+    <group>
+      <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <meshStandardMaterial vertexColors roughness={1} metalness={0} />
+      </mesh>
+      <mesh ref={waterRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[SIZE, SIZE]} />
+        <meshStandardMaterial
+          color="#2f6fb0"
+          transparent
+          opacity={0.8}
+          roughness={0.25}
+          metalness={0.1}
+        />
+      </mesh>
+    </group>
   )
 }

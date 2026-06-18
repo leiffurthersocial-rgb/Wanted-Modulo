@@ -1,14 +1,16 @@
-import { CITY, CITY_PITCH } from '@/config/constants'
-import { sampleHeight, urbanization } from './terrain'
+import { CITY_PITCH } from '@/config/constants'
+import { riverFactor, sampleHeight, urbanization } from './terrain'
 
-export type District = 'downtown' | 'midtown' | 'residential' | 'industrial'
+export type District = 'downtown' | 'midtown' | 'residential' | 'industrial' | 'park'
 
-// Bright, stylized palette (Smashy/Crossy-style flat colour blocks).
+// Modern, brightly-lit voxel palette — clean saturated blocks with a touch of
+// variety per district so the skyline reads as a real, stylized toy city.
 export const DISTRICT_PALETTE: Record<District, string[]> = {
-  downtown: ['#5a8fd6', '#6aa0e0', '#4f86cf', '#7ab0ea', '#5577c4'],
-  midtown: ['#e0a85a', '#e6b96e', '#d99a6a', '#ecc878', '#d88f5a'],
-  residential: ['#e07a8a', '#7ec99a', '#e6c26e', '#88b8e0', '#d98fb0'],
-  industrial: ['#aab0bd', '#9aa0ad', '#b8bec8', '#8a90a0', '#c2c8d2'],
+  downtown: ['#6ea8ff', '#8ec3ff', '#5b93f0', '#a9d2ff', '#7e6cf0'],
+  midtown: ['#ffc05a', '#ffd27a', '#f6a96a', '#ffe08a', '#f59e5a'],
+  residential: ['#ff8fa3', '#8fe0b0', '#ffd680', '#9ec9ff', '#e79bd0'],
+  industrial: ['#b6bcc8', '#a4abba', '#c6ccd6', '#949bac', '#d2d8e2'],
+  park: ['#79d07a', '#8bd98a', '#6fc06f'],
 }
 
 export const ALL_COLORS: string[] = [
@@ -16,12 +18,14 @@ export const ALL_COLORS: string[] = [
   ...DISTRICT_PALETTE.midtown,
   ...DISTRICT_PALETTE.residential,
   ...DISTRICT_PALETTE.industrial,
+  ...DISTRICT_PALETTE.park,
 ]
 const DISTRICT_OFFSET: Record<District, number> = {
   downtown: 0,
   midtown: 5,
   residential: 10,
   industrial: 15,
+  park: 20,
 }
 
 export interface Building {
@@ -36,16 +40,6 @@ export interface Building {
   district: District
 }
 
-export interface CityModel {
-  buildings: Building[]
-  occupied: Set<number>
-  cols: number
-  half: number
-  pitch: number
-  worldHalf: number
-  groundSize: number
-}
-
 export function mulberry32(seed: number): () => number {
   return function () {
     seed |= 0
@@ -56,69 +50,101 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-let cached: CityModel | null = null
+const WORLD_SEED = 1337
 
-/**
- * Noise-driven districted city. Building presence, height and palette follow an
- * "urbanization" field: dense downtown cores fade out through midtown and
- * residential into open plains (no buildings). Each building sits on the terrain
- * height so the world has real verticality. Shared by renderer, collision & AI.
- */
-export function getCity(seed = 1337): CityModel {
-  if (cached) return cached
-
-  const rand = mulberry32(seed)
-  const n = CITY.blocks
-  const half = (n - 1) / 2
-  const buildings: Building[] = []
-  const occupied = new Set<number>()
-
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      const x = (i - half) * CITY_PITCH
-      const z = (j - half) * CITY_PITCH
-      if (Math.abs(x) < CITY_PITCH && Math.abs(z) < CITY_PITCH) continue // spawn area
-
-      const u = urbanization(x, z)
-      if (u < 0.3) continue // plains — no building
-
-      let district: District
-      let footprint: number
-      let h: number
-      if (u > 0.62) {
-        district = 'downtown'
-        footprint = CITY.blockSize * (0.74 + rand() * 0.2)
-        h = 16 + (u - 0.62) * 90 + rand() * rand() * 30
-      } else if (u > 0.46) {
-        district = 'midtown'
-        footprint = CITY.blockSize * (0.7 + rand() * 0.24)
-        h = 8 + rand() * rand() * 22
-      } else {
-        district = rand() < 0.5 ? 'residential' : 'industrial'
-        footprint = CITY.blockSize * (district === 'industrial' ? 0.84 : 0.52 + rand() * 0.22)
-        h = district === 'industrial' ? 5 + rand() * 10 : 4 + rand() * 6
-      }
-
-      const palette = DISTRICT_PALETTE[district]
-      const colorIndex = DISTRICT_OFFSET[district] + ((rand() * palette.length) | 0)
-      buildings.push({ x, z, w: footprint, d: footprint, h, baseY: sampleHeight(x, z), colorIndex, district })
-      occupied.add(i * n + j)
-    }
-  }
-
-  const worldHalf = (n * CITY_PITCH) / 2 + CITY_PITCH
-  cached = {
-    buildings,
-    occupied,
-    cols: n,
-    half,
-    pitch: CITY_PITCH,
-    worldHalf,
-    groundSize: n * CITY_PITCH + CITY_PITCH * 2,
-  }
-  return cached
+/** Deterministic per-cell pseudo-random in [0,1). Stable for any grid cell. */
+function cellRand(i: number, j: number, salt: number): number {
+  let h = (i * 374761393 + j * 668265263 + (salt + WORLD_SEED) * 2654435761) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177) | 0
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
-export function worldToCell(v: number, half: number, pitch: number): number {
-  return Math.round(v / pitch + half)
+function classify(u: number): District {
+  if (u > 0.64) return 'downtown'
+  if (u > 0.5) return 'midtown'
+  if (u > 0.38) return 'residential'
+  return 'industrial'
+}
+
+/** How likely an eligible cell actually holds a building — keeps the city airy
+ *  and modern rather than a dense wall of boxes (design pillar: breathing room). */
+const DISTRICT_FILL: Record<District, number> = {
+  downtown: 0.74,
+  midtown: 0.58,
+  residential: 0.46,
+  industrial: 0.6,
+  park: 0,
+}
+
+/**
+ * The heart of the infinite world: returns the building occupying grid cell
+ * (i, j), or null if that cell is open ground / road / water / park. Pure and
+ * deterministic — no global arrays — so the renderer, collision, AI and props
+ * all derive the identical city wherever the player roams.
+ */
+export function buildingAtCell(i: number, j: number): Building | null {
+  // Keep the spawn plaza clear.
+  if (Math.abs(i) <= 1 && Math.abs(j) <= 1) return null
+
+  const x = i * CITY_PITCH
+  const z = j * CITY_PITCH
+
+  // No buildings in/near rivers — banks stay open for bridges & beaches.
+  if (riverFactor(x, z) > 0.18) return null
+
+  const u = urbanization(x, z)
+  if (u < 0.34) return null // open countryside
+
+  const district = classify(u)
+  // Thin the grid so streets and plazas breathe.
+  if (cellRand(i, j, 1) > DISTRICT_FILL[district]) return null
+
+  let footprint: number
+  let h: number
+  const r = cellRand(i, j, 2)
+  if (district === 'downtown') {
+    footprint = CITY_PITCH * (0.44 + r * 0.16)
+    h = 16 + (u - 0.64) * 95 + r * r * 26
+  } else if (district === 'midtown') {
+    footprint = CITY_PITCH * (0.42 + r * 0.16)
+    h = 9 + r * r * 20
+  } else if (district === 'residential') {
+    footprint = CITY_PITCH * (0.32 + r * 0.14)
+    h = 4 + r * 6
+  } else {
+    footprint = CITY_PITCH * (0.5 + r * 0.12)
+    h = 5 + r * 9
+  }
+
+  const palette = DISTRICT_PALETTE[district]
+  const colorIndex = DISTRICT_OFFSET[district] + ((cellRand(i, j, 3) * palette.length) | 0)
+  return { x, z, w: footprint, d: footprint, h, baseY: sampleHeight(x, z), colorIndex, district }
+}
+
+/** World coordinate -> nearest grid cell index. */
+export function worldToCell(v: number): number {
+  return Math.round(v / CITY_PITCH)
+}
+
+/**
+ * Collects every building within `radius` world units of a center point. Used
+ * by the streaming renderer and by one-shot scatters (vehicles). Cheap enough
+ * to call when the player crosses a chunk boundary.
+ */
+export function streamBuildings(cx: number, cz: number, radius: number): Building[] {
+  const out: Building[] = []
+  const cells = Math.ceil(radius / CITY_PITCH) + 1
+  const ci = worldToCell(cx)
+  const cj = worldToCell(cz)
+  const r2 = radius * radius
+  for (let di = -cells; di <= cells; di++) {
+    for (let dj = -cells; dj <= cells; dj++) {
+      const b = buildingAtCell(ci + di, cj + dj)
+      if (!b) continue
+      const ddx = b.x - cx
+      const ddz = b.z - cz
+      if (ddx * ddx + ddz * ddz <= r2) out.push(b)
+    }
+  }
+  return out
 }

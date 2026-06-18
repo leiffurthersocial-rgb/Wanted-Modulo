@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { CharacterId } from '@/types'
 import { CAMERA, HEAT, POLICE, SIM } from '@/config/constants'
-import { sampleHeight } from '@/game/world/terrain'
+import { sampleHeight, WATER_Y } from '@/game/world/terrain'
 import { Input } from '@/core/input/InputManager'
 import { Audio } from '@/core/audio/AudioManager'
 import { useGameStore } from '@/state/useGameStore'
@@ -63,6 +63,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
         backward: snap.backward,
         left: snap.left,
         right: snap.right,
+        handbrake: Input.isDown('handbrake'),
         interactPressed: Input.consumePressed('interact'),
       },
       dt,
@@ -70,8 +71,8 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
     const { player } = sim
 
-    // --- Chase camera (follows terrain height; sim stays flat at y=0) ---
-    const py = sampleHeight(player.pos.x, player.pos.z)
+    // --- Chase camera (follows terrain height; floats on water when swimming) ---
+    const py = player.swimming ? WATER_Y : sampleHeight(player.pos.x, player.pos.z)
     const inVehicle = player.mode === 'vehicle'
     const camHeading = inVehicle ? player.heading : 0
     const cfg = inVehicle ? CAMERA.vehicle : CAMERA.foot
@@ -108,8 +109,13 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       const g = vehicleRefs.current[i]
       if (!g) continue
       const v = sim.vehicles[i]
-      g.position.set(v.pos.x, sampleHeight(v.pos.x, v.pos.z), v.pos.z)
-      g.rotation.y = v.state.heading
+      // Ramp jump arc + drift yaw (face slightly out of the slide).
+      const arc = v.air > 0 && v.airTotal > 0
+        ? Math.sin((1 - v.air / v.airTotal) * Math.PI) * 3.2
+        : 0
+      const driftYaw = Math.atan2(v.state.slip, Math.abs(v.state.speed) + 4) * 0.6
+      g.position.set(v.pos.x, sampleHeight(v.pos.x, v.pos.z) + arc, v.pos.z)
+      g.rotation.y = v.state.heading + driftYaw
       const sq = v.squash
       g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
     }

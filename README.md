@@ -30,8 +30,23 @@ React · TypeScript · Three.js · React Three Fiber · Zustand · Vite — depl
 | Action | Keys |
 |--------|------|
 | Move | `WASD` / Arrow Keys |
+| Handbrake / Drift | `Space` / `Shift` |
 | Enter / Exit Vehicle | `E` |
 | Pause | `ESC` |
+
+On foot you can wade and **swim across rivers** and climb back out on the far
+bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
+**handbrake** to drift around corners.
+
+## World
+
+The map is **infinite** and streamed around the player: a logical, district-based
+voxel city (downtown → midtown → residential → industrial) thinned out for a
+modern, airy skyline, with rolling countryside, **meandering rivers**, sandy
+banks, and stunt **ramps** scattered through the streets. Buildings, terrain,
+props and water all generate deterministically from world coordinates, so the
+world stays consistent however far you roam — and stealable cars recycle toward
+you so you're never stranded.
 
 ## Development
 

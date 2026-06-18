@@ -29,6 +29,14 @@ function Portrait({ def }: { def: CharacterDef }) {
         {/* eyes */}
         <div style={{ position: 'absolute', top: 18, left: 19, width: 5, height: 5, background: def.eyes, borderRadius: 1 }} />
         <div style={{ position: 'absolute', top: 18, left: 30, width: 5, height: 5, background: def.eyes, borderRadius: 1 }} />
+        {/* glasses */}
+        {def.glasses && (
+          <div style={{ position: 'absolute', top: 16, left: 17, width: 20, height: 8, border: '1.5px solid #15171c', borderRadius: 3 }} />
+        )}
+        {/* beard */}
+        {def.beard && (
+          <div style={{ position: 'absolute', top: 27, left: 14, width: 26, height: 8, background: def.hair, borderRadius: 3 }} />
+        )}
         {/* body */}
         <div
           style={{

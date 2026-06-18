@@ -4,7 +4,7 @@ import type { VehicleState } from '@/game/vehicles/vehiclePhysics'
 import type { PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { POLICE_CLASSES } from '@/game/vehicles/policeCatalog'
 import type { PropInstance } from '@/game/world/propModel'
-import { getProps } from '@/game/world/propModel'
+import { ensurePropWindow, getProps } from '@/game/world/propModel'
 import type { PropType } from '@/game/world/propCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import { PARTICLES, PLAYER, POLICE } from '@/config/constants'
@@ -19,6 +19,8 @@ export interface PlayerSim {
   heading: number
   mode: 'foot' | 'vehicle'
   vehicleIndex: number
+  /** True while wading/swimming in a river (on foot). */
+  swimming: boolean
 }
 
 /** A destructible prop with run-scoped alive state (cloned from the model). */
@@ -42,6 +44,10 @@ export interface VehicleEntity {
   smokeTimer: number
   /** Transient squash applied on impact (visual), decays to 0. */
   squash: number
+  /** Remaining airtime (s) after launching off a ramp; 0 when grounded. */
+  air: number
+  /** Total airtime of the current jump, for the arc shape. */
+  airTotal: number
 }
 
 export interface PoliceUnit {
@@ -141,7 +147,7 @@ function makePolicePool(): PoliceUnit[] {
       classId: 'patrol',
       def: POLICE_CLASSES.patrol.def,
       pos: new THREE.Vector3(),
-      state: { heading: 0, speed: 0 },
+      state: { heading: 0, speed: 0, slip: 0 },
       health: 1,
       ai: 'spawn',
       flankAngle: 0,
@@ -189,15 +195,19 @@ function makeParticlePool(): Particle[] {
 
 /** Builds a fresh simulation state for a new run. */
 export function createSimState(): SimState {
+  // Seed the streaming prop window around the spawn before snapshotting props.
+  ensurePropWindow(0, 0)
   const vehicles: VehicleEntity[] = VEHICLE_SPAWNS.map((s) => ({
     def: s.def,
     pos: new THREE.Vector3(...s.position),
-    state: { heading: s.heading, speed: 0 },
+    state: { heading: s.heading, speed: 0, slip: 0 },
     health: s.def.durability,
     occupied: false,
     wrecked: false,
     smokeTimer: 0,
     squash: 0,
+    air: 0,
+    airTotal: 0,
   }))
 
   return {
@@ -206,6 +216,7 @@ export function createSimState(): SimState {
       heading: 0,
       mode: 'foot',
       vehicleIndex: -1,
+      swimming: false,
     },
     playerVel: new THREE.Vector3(),
     playerSpeed: 0,

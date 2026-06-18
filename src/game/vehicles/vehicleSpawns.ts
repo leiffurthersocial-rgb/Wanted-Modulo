@@ -1,6 +1,7 @@
 import type { VehicleDef } from '@/types'
 import { CITY_PITCH } from '@/config/constants'
-import { getCity, mulberry32 } from '@/game/world/cityModel'
+import { mulberry32, streamBuildings } from '@/game/world/cityModel'
+import { isWater } from '@/game/world/terrain'
 import { VEHICLES, VEHICLE_IDS } from './vehicleCatalog'
 
 export interface VehicleSpawn {
@@ -21,21 +22,22 @@ const NEAR_SPAWN: VehicleSpawn[] = [
 ]
 
 /**
- * Stealable cars are scattered across the city (on roadsides beside buildings)
- * so the player is never stranded far from a vehicle — plus the guaranteed set
- * near the spawn. Deterministic so renderer and simulation agree.
+ * Civilian cars parked beside buildings around the spawn region. The world is
+ * infinite, so this fixed pool is recycled toward the player as they roam (see
+ * recycleVehicles) — the player is never stranded. Deterministic so the
+ * renderer and simulation agree on the starting layout.
  */
 function build(): VehicleSpawn[] {
   const list = [...NEAR_SPAWN]
   const rand = mulberry32(424242)
-  const city = getCity()
-  const p = Math.min(0.08, 42 / Math.max(1, city.buildings.length))
   const o = CITY_PITCH / 2
-  for (const b of city.buildings) {
-    if (rand() > p) continue
+  for (const b of streamBuildings(0, 0, 260)) {
+    if (list.length >= 34) break
+    if (rand() > 0.16) continue
     const side = (rand() * 4) | 0
     const x = b.x + (side === 0 ? o : side === 1 ? -o : 0)
     const z = b.z + (side === 2 ? o : side === 3 ? -o : 0)
+    if (isWater(x, z)) continue
     const id = VEHICLE_IDS[(rand() * VEHICLE_IDS.length) | 0]
     list.push({ def: VEHICLES[id], position: [x, 0, z], heading: rand() * Math.PI * 2 })
   }

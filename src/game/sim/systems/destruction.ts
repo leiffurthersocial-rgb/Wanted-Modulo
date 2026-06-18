@@ -31,23 +31,35 @@ export function ejectPlayer(state: SimState, v: VehicleEntity): void {
   state.player.vehicleIndex = -1
 }
 
-/** Player plows through destructible props, spawning debris. */
+/** Player plows through destructible props (and launches off ramps). */
 export function updatePropCollisions(state: SimState, _dt: number): void {
   const { player } = state
   if (player.mode !== 'vehicle') return
   const v = state.vehicles[player.vehicleIndex]
   if (v.wrecked) return
   const speed = Math.abs(v.state.speed)
-  if (speed < PROPS.smashSpeed) return
 
   const carR = v.def.size.width * 0.6
   for (const prop of state.props) {
-    if (!prop.alive) continue
     const tdef = PROP_TYPES[prop.type]
     const r = tdef.radius + carR
     const dx = prop.x - player.pos.x
     const dz = prop.z - player.pos.z
     if (dx * dx + dz * dz > r * r) continue
+
+    // Ramps launch the car into a fun arc instead of being destroyed.
+    if (tdef.launch) {
+      if (v.air <= 0 && speed > PROPS.smashSpeed) {
+        const airtime = 0.55 + Math.min(0.6, speed / v.def.topSpeed * 0.6)
+        v.air = airtime
+        v.airTotal = airtime
+        v.state.speed = Math.min(v.def.topSpeed, v.state.speed * 1.08 + 2)
+      }
+      continue
+    }
+
+    if (!prop.alive || tdef.indestructible) continue
+    if (speed < PROPS.smashSpeed) continue
 
     prop.alive = false
     state.hideQueue.push({ type: prop.type, index: prop.typeIndex })

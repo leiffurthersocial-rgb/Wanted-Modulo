@@ -1,10 +1,12 @@
 import { SCORE } from '@/config/constants'
+import { ensurePropWindow, getProps } from '@/game/world/propModel'
 import type { SimState } from './state'
 import { updatePlayer, type StepInput } from './systems/player'
 import {
   updatePropCollisions,
   updateVehicleDamage,
 } from './systems/destruction'
+import { recycleVehicles } from './systems/vehicles'
 import { updateParticles } from './systems/particles'
 import { heatLevel, updateHeat } from './systems/heat'
 import {
@@ -21,9 +23,15 @@ import {
  * `SimState`; the Simulation component handles camera + committing transforms.
  */
 export function stepSim(state: SimState, input: StepInput, dt: number): void {
+  // 0. Stream the infinite world's destructible props around the player.
+  if (ensurePropWindow(state.player.pos.x, state.player.pos.z)) {
+    state.props = getProps().props.map((p) => ({ ...p, alive: true }))
+  }
+
   // 1. Player movement + world collisions.
   updatePlayer(state, input, dt)
   updatePropCollisions(state, dt)
+  recycleVehicles(state)
 
   // 2. Perception -> heat escalation.
   updateSpotting(state, dt)
