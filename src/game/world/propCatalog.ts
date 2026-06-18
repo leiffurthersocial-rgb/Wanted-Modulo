@@ -57,8 +57,10 @@ export const PROP_TYPES: Record<PropType, PropTypeDef> = {
   },
   tree: {
     type: 'tree',
-    body: { size: [0.4, 1.4, 0.4], y: 0.7, color: '#5b4329' },
-    cap: { size: [1.8, 1.9, 1.8], y: 2.2, color: '#3f7d3a' },
+    // Base colours are white — actual trunk/foliage colour is applied per-instance
+    // in PropField via setColorAt so each tree matches the biome it's planted in.
+    body: { size: [0.4, 1.4, 0.4], y: 0.7, color: '#ffffff' },
+    cap: { size: [1.8, 1.9, 1.8], y: 2.2, color: '#ffffff' },
     radius: 1.0,
     debrisColor: '#3f7d3a',
     debrisCount: 12,

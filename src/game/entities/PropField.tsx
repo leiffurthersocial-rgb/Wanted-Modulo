@@ -20,7 +20,14 @@ export function PropField() {
   const lastVersion = useRef(-1)
 
   const scratch = useMemo(
-    () => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), pos: new THREE.Vector3(), scl: new THREE.Vector3(1, 1, 1), yAxis: new THREE.Vector3(0, 1, 0) }),
+    () => ({
+      m: new THREE.Matrix4(),
+      q: new THREE.Quaternion(),
+      pos: new THREE.Vector3(),
+      scl: new THREE.Vector3(1, 1, 1),
+      yAxis: new THREE.Vector3(0, 1, 0),
+      color: new THREE.Color(),
+    }),
     [],
   )
 
@@ -29,7 +36,7 @@ export function PropField() {
     if (v === lastVersion.current) return
     lastVersion.current = v
     const { props } = getProps()
-    const { m, q, pos, scl, yAxis } = scratch
+    const { m, q, pos, scl, yAxis, color } = scratch
 
     // Clear every slot, then place the active window's props.
     for (const type of PROP_TYPE_LIST) {
@@ -53,6 +60,10 @@ export function PropField() {
         pos.set(prop.x + sin * oz, by + tdef.body.y, prop.z + cos * oz)
         m.compose(pos, q, scl)
         body.setMatrixAt(prop.typeIndex, m)
+        if (prop.trunk) {
+          color.set(prop.trunk)
+          body.setColorAt(prop.typeIndex, color)
+        }
       }
       if (tdef.cap) {
         const cap = capRefs.current[prop.type]
@@ -61,15 +72,25 @@ export function PropField() {
           pos.set(prop.x + sin * oz, by + tdef.cap.y, prop.z + cos * oz)
           m.compose(pos, q, scl)
           cap.setMatrixAt(prop.typeIndex, m)
+          if (prop.foliage) {
+            color.set(prop.foliage)
+            cap.setColorAt(prop.typeIndex, color)
+          }
         }
       }
     }
 
     for (const type of PROP_TYPE_LIST) {
       const b = bodyRefs.current[type]
-      if (b) b.instanceMatrix.needsUpdate = true
+      if (b) {
+        b.instanceMatrix.needsUpdate = true
+        if (b.instanceColor) b.instanceColor.needsUpdate = true
+      }
       const c = capRefs.current[type]
-      if (c) c.instanceMatrix.needsUpdate = true
+      if (c) {
+        c.instanceMatrix.needsUpdate = true
+        if (c.instanceColor) c.instanceColor.needsUpdate = true
+      }
     }
   })
 

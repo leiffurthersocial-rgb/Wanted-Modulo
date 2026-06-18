@@ -79,6 +79,14 @@ export const BIOME_GROUND: Record<Biome, { a: string; b: string; bank: string }>
   wetland: { a: '#5aa86a', b: '#4f9a5e', bank: '#b9a877' },
 }
 
+/** Per-biome tree foliage + trunk so the same prop reads differently across regions. */
+export const BIOME_TREE: Record<Biome, { foliage: string; trunk: string }> = {
+  meadow: { foliage: '#3f7d3a', trunk: '#5b4329' },
+  desert: { foliage: '#9caa4e', trunk: '#7a5a3a' },
+  tundra: { foliage: '#bcd6c9', trunk: '#6b5d52' },
+  wetland: { foliage: '#2f6b4f', trunk: '#41382a' },
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Rivers — straight, grid-aligned bands with right-angle corners            */
 /* -------------------------------------------------------------------------- */

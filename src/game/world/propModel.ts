@@ -1,6 +1,6 @@
 import { CITY_PITCH, PROPS } from '@/config/constants'
 import { buildingAtCell, mulberry32, worldToCell } from './cityModel'
-import { isWater, riverFactor, waterDirection } from './terrain'
+import { biomeAt, BIOME_TREE, isWater, riverFactor, waterDirection } from './terrain'
 import { WORLD } from '@/config/world'
 import { PROP_TYPES, PROP_TYPE_LIST, type PropType } from './propCatalog'
 
@@ -11,6 +11,9 @@ export interface PropInstance {
   rot: number
   /** Index of this prop within its type's InstancedMesh (window-local). */
   typeIndex: number
+  /** Per-instance foliage/trunk colour override (biome-tinted trees). */
+  foliage?: string
+  trunk?: string
 }
 
 export interface PropModel {
@@ -118,7 +121,13 @@ export function ensurePropWindow(px: number, pz: number): boolean {
 
       const type = pickType(rand())
       if (counts[type] >= PROP_CAPACITY) continue
-      props.push({ type, x: jx, z: jz, rot: rand() * Math.PI * 2, typeIndex: counts[type]++ })
+      const inst: PropInstance = { type, x: jx, z: jz, rot: rand() * Math.PI * 2, typeIndex: counts[type]++ }
+      if (type === 'tree') {
+        const palette = BIOME_TREE[biomeAt(jx, jz)]
+        inst.foliage = palette.foliage
+        inst.trunk = palette.trunk
+      }
+      props.push(inst)
     }
   }
 
