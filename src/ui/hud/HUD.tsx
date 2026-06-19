@@ -70,6 +70,9 @@ function StatusBanner({ status, policeCount }: { status: string; policeCount: nu
   )
 }
 
+/** Seconds a fleeing suspect can stay clear before they escape (mirrors sim). */
+const ESCAPE_SECONDS = 11
+
 /** Center HUD for cop-chase mode: bust meter, escape warning, catch banner. */
 function ChaseHud({ chase }: { chase: ChaseStats }) {
   const onTarget = chase.suspectDist < 9
@@ -81,7 +84,7 @@ function ChaseHud({ chase }: { chase: ChaseStats }) {
       {chase.escapeWarn > 0.05 && (
         <div className="status-banner spotted">
           🏃 SUSPECT FLEEING
-          <span className="status-sub"> · {Math.round((1 - chase.escapeWarn) * 9)}s to catch</span>
+          <span className="status-sub"> · {Math.ceil((1 - chase.escapeWarn) * ESCAPE_SECONDS)}s to catch</span>
         </div>
       )}
 
@@ -103,6 +106,27 @@ function SuspectTracker({ chase }: { chase: ChaseStats }) {
         ▲
       </div>
       <div className="suspect-dist">{Math.round(chase.suspectDist)}m</div>
+    </div>
+  )
+}
+
+/**
+ * A big marker pinned to the edge of the screen pointing toward the suspect when
+ * they're far away / slipping the net — shows the player exactly which way to go.
+ */
+function SuspectEdgePointer({ chase }: { chase: ChaseStats }) {
+  if (chase.suspectDist < 55) return null
+  const fleeing = chase.escapeWarn > 0.05
+  return (
+    <div className="edge-pointer-layer">
+      <div className="edge-pointer" style={{ transform: `translateX(-50%) rotate(${chase.suspectAngle}rad)` }}>
+        <div className={`edge-pointer-mark ${fleeing ? 'fleeing' : ''}`}>
+          <span className="ep-arrow">▲</span>
+          <span className="ep-dist" style={{ transform: `rotate(${-chase.suspectAngle}rad)` }}>
+            {Math.round(chase.suspectDist)}m
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -190,6 +214,8 @@ export function HUD() {
           )}
         </div>
       </div>
+
+      {pursuit && stats.chase && <SuspectEdgePointer chase={stats.chase} />}
 
       {showMinimap && <Minimap />}
 

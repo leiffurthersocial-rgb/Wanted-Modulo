@@ -78,10 +78,10 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   tusya: {
     id: 'tusya',
     name: 'Tusya',
-    description: 'Brown skin · black hair · brown eyes',
+    description: 'Brown skin · short black hair · brown eyes',
     skin: '#8a5a3a',
     hair: '#15110f',
-    hairStyle: 'long',
+    hairStyle: 'short',
     eyes: '#3b2316',
     shirt: '#c9447a',
     pants: '#2a2d3a',

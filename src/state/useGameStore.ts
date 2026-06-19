@@ -34,6 +34,8 @@ export interface RadarBlip {
 export interface RadarData {
   px: number
   pz: number
+  /** Player heading (radians) — the minimap rotates so this points "up". */
+  heading: number
   units: RadarBlip[]
   helis: RadarBlip[]
   /** The fleeing suspect in cop-chase mode (null otherwise). */
@@ -71,7 +73,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedCharacter: 'robin',
   mode: 'survive',
   stats: emptyStats(),
-  radar: { px: 0, pz: 0, units: [], helis: [] },
+  radar: { px: 0, pz: 0, heading: 0, units: [], helis: [] },
   cheated: false,
 
   setRadar: (radar) => set({ radar }),

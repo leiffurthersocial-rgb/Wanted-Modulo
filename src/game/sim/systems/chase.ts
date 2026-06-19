@@ -55,7 +55,8 @@ const BUST_FILL = 0.34 // per second of sustained proximity (~3s to fill)
 const BUST_DRAIN = 0.17 // per second when out of range
 const RAM_BONUS = 0.16 // bust gained from a solid ram
 const ESCAPE_DIST = 118 // beyond this the suspect is "getting away"
-const ESCAPE_LIMIT = 9 // seconds beyond ESCAPE_DIST before they escape
+/** Seconds the suspect may stay beyond ESCAPE_DIST before they fully escape. */
+export const ESCAPE_LIMIT = 11
 const SPAWN_DIST = 64 // distance a fresh suspect appears from the cop
 
 /** Suspect top-speed fraction of the cop's — always < 1 so the cop can close. */

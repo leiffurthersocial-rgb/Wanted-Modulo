@@ -18,7 +18,7 @@ import { VoxelVehicle } from '@/game/models/VoxelVehicle'
 import { VoxelPoliceCar } from '@/game/models/VoxelPoliceCar'
 import { Registry } from '@/game/sim/registry'
 import { createSimState } from '@/game/sim/state'
-import { SUSPECT_DEF } from '@/game/sim/systems/chase'
+import { ESCAPE_LIMIT, SUSPECT_DEF } from '@/game/sim/systems/chase'
 import { stepSim } from '@/game/sim/step'
 import { getDebug } from '@/state/useDebugStore'
 
@@ -379,7 +379,14 @@ function publishStats(
   const helis: { x: number; z: number }[] = []
   for (const h of sim.helis) if (h.active) helis.push({ x: h.pos.x, z: h.pos.z })
   const suspect = sim.chase ? { x: sim.chase.suspect.pos.x, z: sim.chase.suspect.pos.z } : null
-  useGameStore.getState().setRadar({ px: sim.player.pos.x, pz: sim.player.pos.z, units, helis, suspect })
+  useGameStore.getState().setRadar({
+    px: sim.player.pos.x,
+    pz: sim.player.pos.z,
+    heading: sim.player.heading,
+    units,
+    helis,
+    suspect,
+  })
 
   const inVehicle = sim.player.mode === 'vehicle'
   const v = inVehicle ? sim.vehicles[sim.player.vehicleIndex] : null
@@ -390,7 +397,7 @@ function publishStats(
         bust: sim.chase.bust,
         suspectDist: sim.chase.dist,
         suspectAngle: sim.chase.bearing,
-        escapeWarn: Math.min(1, sim.chase.escapeTimer / 9),
+        escapeWarn: Math.min(1, sim.chase.escapeTimer / ESCAPE_LIMIT),
         banner: sim.chase.banner,
       }
     : null
