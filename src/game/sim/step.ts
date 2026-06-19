@@ -11,6 +11,7 @@ import {
 import { recycleVehicles, updateVehicleVertical } from './systems/vehicles'
 import { updatePowerups } from './systems/powerups'
 import { updateParticles } from './systems/particles'
+import { updateChase } from './systems/chase'
 import { heatLevel, updateHeat } from './systems/heat'
 import {
   manageFleet,
@@ -32,6 +33,25 @@ export function stepSim(state: SimState, input: StepInput, dt: number): void {
   }
   if (ensurePowerupWindow(state.player.pos.x, state.player.pos.z)) {
     state.powerups = getPowerups().items
+  }
+
+  // Cop-chase mode runs a leaner loop: you ARE the police (no heat / no being
+  // hunted), tracking down a fleeing suspect instead.
+  if (state.mode === 'pursuit') {
+    updatePlayer(state, input, dt)
+    updatePropCollisions(state, dt)
+    updateVehicleVertical(state, dt)
+    updatePowerups(state, dt)
+    updateChase(state, dt)
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 3.5)
+    updateVehicleDamage(state, dt)
+    updateParticles(state, dt)
+    state.acc.time += dt
+    const d = state.playerSpeed * dt
+    state.acc.distance += d
+    if (state.playerSpeed > state.acc.topSpeed) state.acc.topSpeed = state.playerSpeed
+    state.flashPhase += dt
+    return
   }
 
   // 1. Player movement + world collisions.

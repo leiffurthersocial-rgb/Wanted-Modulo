@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import { useGameStore } from '@/state/useGameStore'
 import { useProgressionStore } from '@/state/useProgressionStore'
+import type { GameMode } from '@/types'
 import { DebugMenu, useTripleTap } from './DebugMenu'
 
 export function MainMenu() {
   const setPhase = useGameStore((s) => s.setPhase)
+  const setMode = useGameStore((s) => s.setMode)
   const bestScore = useProgressionStore((s) => s.bestScore)
   const totalRuns = useProgressionStore((s) => s.totalRuns)
   const [showDebug, setShowDebug] = useState(false)
   const onTitleTap = useTripleTap(() => setShowDebug(true))
+
+  const play = (mode: GameMode) => {
+    setMode(mode)
+    setPhase('characterSelect')
+  }
 
   return (
     <div className="screen">
@@ -19,9 +26,14 @@ export function MainMenu() {
       <div className="tagline">You are hunted · Survive</div>
 
       <div className="btn-row">
-        <button className="btn primary" onClick={() => setPhase('characterSelect')}>
+        <button className="btn primary" onClick={() => play('survive')}>
           Play
         </button>
+        <button className="btn primary alt" onClick={() => play('pursuit')}>
+          🚔 Cop Chase
+        </button>
+      </div>
+      <div className="btn-row">
         <button className="btn ghost" onClick={() => setPhase('statistics')}>
           Statistics
         </button>
@@ -39,7 +51,7 @@ export function MainMenu() {
       )}
 
       <div className="muted" style={{ position: 'absolute', bottom: 18 }}>
-        Drive, drift and survive an endless voxel city · drag to look around on foot
+        Survive an endless chase — or flip the badge and hunt suspects in Cop Chase
       </div>
 
       {showDebug && <DebugMenu onClose={() => setShowDebug(false)} />}

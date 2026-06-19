@@ -67,6 +67,16 @@ export function Minimap() {
         const { left, top } = toLocal(h.x, h.z)
         return <div key={`h${i}`} className="blip heli" style={{ left, top }} />
       })}
+      {radar.suspect && (() => {
+        // Always show the suspect — clamp it to the minimap edge if out of range
+        // so you can always tell which way to chase.
+        const dx = radar.suspect.x - radar.px
+        const dz = radar.suspect.z - radar.pz
+        const d = Math.hypot(dx, dz) || 1
+        const cl = Math.min(d, RANGE)
+        const { left, top } = toLocal(radar.px + (dx / d) * cl, radar.pz + (dz / d) * cl)
+        return <div className="blip suspect" style={{ left, top }} />
+      })()}
       <div className="blip player" style={{ left: half, top: half }} />
     </div>
   )

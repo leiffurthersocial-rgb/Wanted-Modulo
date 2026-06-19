@@ -426,6 +426,7 @@ canvas {
 
 .power-chip.nitro { background: var(--accent-2); }
 .power-chip.shield { background: #6c5ce7; }
+.power-chip.cloak { background: #9d7bff; }
 
 .capture-warn {
   width: 100%;
@@ -553,6 +554,14 @@ canvas {
   height: 11px;
   background: var(--accent-2);
   box-shadow: 0 0 0 2px #fff;
+}
+
+.blip.suspect {
+  width: 12px;
+  height: 12px;
+  background: #ff5fa2;
+  box-shadow: 0 0 0 2px #fff, 0 0 10px 2px #ff5fa2;
+  animation: pulse 0.7s ease-in-out infinite;
 }
 
 /* ---------- Settings / Statistics ---------- */
@@ -786,4 +795,139 @@ canvas {
   text-align: center;
   max-width: 440px;
   line-height: 1.5;
+}
+
+/* ---------- Cop-chase (pursuit) mode ---------- */
+.hud-stat.caught .value { color: #2f6df0; }
+
+.suspect-tracker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0.5rem 0.8rem;
+  box-shadow: 0 4px 0 var(--edge-soft);
+}
+
+.suspect-arrow {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #ff3b8a;
+  transition: transform 0.12s linear;
+}
+
+.suspect-dist {
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.bust-meter {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 0.45rem 0.75rem;
+  box-shadow: 0 4px 0 var(--edge-soft);
+}
+
+.bust-meter.active {
+  box-shadow: 0 4px 0 #2f6df0;
+}
+
+.bust-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.bust-meter.active .bust-label { color: #2f6df0; }
+
+.bust-track {
+  height: 11px;
+  background: #e3e9f2;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bust-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2effa6, #2f6df0);
+  transition: width 0.1s linear;
+}
+
+.chase-banner {
+  align-self: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #2f6df0;
+  padding: 0.4rem 1.1rem;
+  border-radius: 999px;
+  box-shadow: 0 5px 0 #1f49a8;
+  animation: pop-in 0.3s ease-out;
+}
+
+/* Cloak: a soft violet vignette while the player is invisible to police. */
+.hud.cloaked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 40px rgba(157, 123, 255, 0.5);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* ---------- Mode switcher (character select) ---------- */
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  background: #eef2f8;
+  border-radius: 14px;
+  padding: 5px;
+  margin: 0 auto 0.5rem;
+}
+
+.mode-switch button {
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.mode-switch button.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--accent-d);
+}
+
+.mode-blurb {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  margin-bottom: 0.9rem;
+  max-width: 460px;
+  line-height: 1.45;
+}
+
+.btn.primary.alt {
+  background: #2f6df0;
+  box-shadow: 0 5px 0 #1f49a8;
+}
+.btn.primary.alt:active {
+  box-shadow: 0 2px 0 #1f49a8;
+}
+
+@keyframes pop-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }

@@ -8,8 +8,12 @@ interface ProgressionStore {
   totalRuns: number
   totalTime: number
   peakHeatEver: number
+  /** Cop-chase mode: most suspects caught in a run, and best chase score. */
+  bestCaught: number
+  bestChaseScore: number
 
   recordRun: (stats: RunStats) => void
+  recordChase: (caught: number, score: number) => void
   reset: () => void
 }
 
@@ -26,6 +30,8 @@ export const useProgressionStore = create<ProgressionStore>()(
       totalRuns: 0,
       totalTime: 0,
       peakHeatEver: 0,
+      bestCaught: 0,
+      bestChaseScore: 0,
 
       recordRun: (stats) =>
         set((s) => ({
@@ -36,8 +42,22 @@ export const useProgressionStore = create<ProgressionStore>()(
           peakHeatEver: Math.max(s.peakHeatEver, stats.peakHeat),
         })),
 
+      recordChase: (caught, score) =>
+        set((s) => ({
+          bestCaught: Math.max(s.bestCaught, caught),
+          bestChaseScore: Math.max(s.bestChaseScore, score),
+        })),
+
       reset: () =>
-        set({ bestScore: 0, bestTime: 0, totalRuns: 0, totalTime: 0, peakHeatEver: 0 }),
+        set({
+          bestScore: 0,
+          bestTime: 0,
+          totalRuns: 0,
+          totalTime: 0,
+          peakHeatEver: 0,
+          bestCaught: 0,
+          bestChaseScore: 0,
+        }),
     }),
     { name: 'wanted-modulo:progression' },
   ),

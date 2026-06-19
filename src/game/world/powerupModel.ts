@@ -2,8 +2,8 @@ import { CITY_PITCH } from '@/config/constants'
 import { buildingAtCell, mulberry32, worldToCell } from './cityModel'
 import { isWater } from './terrain'
 
-export type PowerupType = 'nitro' | 'repair' | 'shield' | 'emp'
-export const POWERUP_TYPES: PowerupType[] = ['nitro', 'repair', 'shield', 'emp']
+export type PowerupType = 'nitro' | 'repair' | 'shield' | 'emp' | 'cloak'
+export const POWERUP_TYPES: PowerupType[] = ['nitro', 'repair', 'shield', 'emp', 'cloak']
 
 export interface Powerup {
   type: PowerupType

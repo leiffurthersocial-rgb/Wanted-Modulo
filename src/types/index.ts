@@ -10,6 +10,9 @@ export type GamePhase =
   | 'paused'
   | 'gameover'
 
+/** Which game mode a run uses. */
+export type GameMode = 'survive' | 'pursuit'
+
 /** Logical input actions, decoupled from physical keys (see InputManager). */
 export type InputAction =
   | 'forward'
@@ -30,8 +33,9 @@ export type CharacterId =
   | 'lennard'
   | 'erim'
   | 'david'
+  | 'sofia'
 
-export type HairStyle = 'ponytail' | 'messy' | 'short' | 'buzz' | 'side' | 'long'
+export type HairStyle = 'ponytail' | 'messy' | 'short' | 'buzz' | 'side' | 'long' | 'bob'
 
 export interface CharacterDef {
   id: CharacterId
@@ -110,4 +114,26 @@ export interface RunStats {
   boost: number
   /** Remaining shield (s). */
   shield: number
+  /** Remaining cloak / invisibility (s). */
+  cloak: number
+  /** Which mode this run is. */
+  mode: GameMode
+  /** Cop-chase stats (present only in pursuit mode). */
+  chase: ChaseStats | null
+}
+
+/** Live HUD stats for the cop-chase (pursuit) mode. */
+export interface ChaseStats {
+  /** Suspects busted so far this run. */
+  caught: number
+  /** Bust progress on the current suspect (0..1). */
+  bust: number
+  /** Distance (world units) to the current suspect. */
+  suspectDist: number
+  /** Bearing to the suspect relative to the camera/heading (radians). */
+  suspectAngle: number
+  /** Escape warning 0..1 — suspect is slipping away. */
+  escapeWarn: number
+  /** "CAUGHT!" banner flash timer (s). */
+  banner: number
 }

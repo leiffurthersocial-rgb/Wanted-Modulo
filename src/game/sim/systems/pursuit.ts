@@ -22,6 +22,14 @@ export function updateSpotting(state: SimState, dt: number): void {
   const range = POLICE.sightRange * (onFoot ? 0.6 : 1)
   let spotted = false
 
+  // CLOAK powerup: completely invisible to police — they lose all sight of you.
+  if (state.power.cloak > 0) {
+    heat.spotted = false
+    heat.timeSinceSpotted += dt
+    if (heat.hasLastKnown) heat.searchTimer += dt
+    return
+  }
+
   for (const u of state.police) {
     if (!u.active) continue
     const dx = p.pos.x - u.pos.x
@@ -418,8 +426,8 @@ export function updateCapture(state: SimState, dt: number): void {
   }
 
   const debug = getDebug()
-  if (state.power.shield > 0 || (debug.enabled && debug.noCapture)) {
-    // SHIELD / debug no-capture: cannot be captured; bleed off any progress.
+  if (state.power.shield > 0 || state.power.cloak > 0 || (debug.enabled && debug.noCapture)) {
+    // SHIELD / CLOAK / debug no-capture: cannot be captured; bleed off progress.
     state.capture -= CAPTURE.recover * 2 * dt
   } else if (near > 0 && (onFoot || state.playerSpeed < CAPTURE.slowSpeed)) {
     const mult = onFoot ? CAPTURE.onFootMultiplier : 1

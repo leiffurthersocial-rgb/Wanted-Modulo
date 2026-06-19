@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import type { CharacterId, GamePhase, RunStats } from '@/types'
+import type { CharacterId, GameMode, GamePhase, RunStats } from '@/types'
 import { SCORE } from '@/config/constants'
 import { useProgressionStore } from './useProgressionStore'
 
-const emptyStats = (): RunStats => ({
+const emptyStats = (mode: GameMode = 'survive'): RunStats => ({
   time: 0,
   distance: 0,
   speed: 0,
@@ -22,6 +22,9 @@ const emptyStats = (): RunStats => ({
   powerBanner: null,
   boost: 0,
   shield: 0,
+  cloak: 0,
+  mode,
+  chase: null,
 })
 
 export interface RadarBlip {
@@ -33,11 +36,15 @@ export interface RadarData {
   pz: number
   units: RadarBlip[]
   helis: RadarBlip[]
+  /** The fleeing suspect in cop-chase mode (null otherwise). */
+  suspect?: RadarBlip | null
 }
 
 interface GameStore {
   phase: GamePhase
   selectedCharacter: CharacterId
+  /** Which mode the next/current run uses. */
+  mode: GameMode
   stats: RunStats
   radar: RadarData
   /** True once any debug override was active during the current run — its
@@ -47,6 +54,7 @@ interface GameStore {
   setRadar: (radar: RadarData) => void
   setPhase: (phase: GamePhase) => void
   selectCharacter: (id: CharacterId) => void
+  setMode: (mode: GameMode) => void
   startRun: () => void
   pause: () => void
   resume: () => void
@@ -61,6 +69,7 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set, get) => ({
   phase: 'menu',
   selectedCharacter: 'robin',
+  mode: 'survive',
   stats: emptyStats(),
   radar: { px: 0, pz: 0, units: [], helis: [] },
   cheated: false,
@@ -68,8 +77,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setRadar: (radar) => set({ radar }),
   setPhase: (phase) => set({ phase }),
   selectCharacter: (id) => set({ selectedCharacter: id }),
+  setMode: (mode) => set({ mode }),
 
-  startRun: () => set({ phase: 'playing', stats: emptyStats(), cheated: false }),
+  startRun: () =>
+    set((s) => ({ phase: 'playing', stats: emptyStats(s.mode), cheated: false })),
 
   pause: () => {
     if (get().phase === 'playing') set({ phase: 'paused' })
@@ -86,14 +97,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({ stats: { ...state.stats, ...partial } })),
 
   endRun: () => {
-    // Score is accumulated live by the simulation; finalise with the peak-heat
-    // bonus and lock it in.
-    const stats = { ...get().stats, capture: 1 }
+    const cur = get().stats
+    if (cur.mode === 'pursuit') {
+      // Cop-chase: score is finalised live (per catch). Record to the separate
+      // pursuit best so it never mixes with the survive personal best.
+      const stats = { ...cur }
+      if (!get().cheated) {
+        useProgressionStore.getState().recordChase(stats.chase?.caught ?? 0, stats.score)
+      }
+      set({ phase: 'gameover', stats })
+      return
+    }
+    // Survive: score is accumulated live; finalise with the peak-heat bonus.
+    const stats = { ...cur, capture: 1 }
     stats.score = Math.round(stats.score + stats.peakHeat * SCORE.peakHeatBonus)
     // Debug-tainted runs are never recorded to the lifetime stats / best.
     if (!get().cheated) useProgressionStore.getState().recordRun(stats)
     set({ phase: 'gameover', stats })
   },
 
-  toMenu: () => set({ phase: 'menu', stats: emptyStats() }),
+  toMenu: () => set({ phase: 'menu', stats: emptyStats(get().mode) }),
 }))

@@ -8,10 +8,10 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
   robin: {
     id: 'robin',
     name: 'Robin',
-    description: 'Blonde ponytail · white tee',
+    description: 'Blonde bob · white tee',
     skin: '#e8b98f',
     hair: '#e6c26e',
-    hairStyle: 'ponytail',
+    hairStyle: 'bob',
     eyes: '#5b3a21',
     shirt: '#f2f4f8',
     pants: '#27314a',
@@ -95,7 +95,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     description: 'Brown hair · brown eyes · glasses',
     skin: '#e0a87c',
     hair: '#5a3a22',
-    hairStyle: 'messy',
+    hairStyle: 'short',
     eyes: '#4a3120',
     shirt: '#6c5ce7',
     pants: '#33384a',
@@ -133,6 +133,20 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
     height: 1.04,
     width: 1.04,
   },
+  sofia: {
+    id: 'sofia',
+    name: 'Sofia',
+    description: 'Moroccan · long blonde hair',
+    skin: '#bd8350',
+    hair: '#e3c069',
+    hairStyle: 'long',
+    eyes: '#4a3120',
+    shirt: '#1fa89a',
+    pants: '#2c3142',
+    shoes: '#f0e9e0',
+    height: 0.97,
+    width: 0.86,
+  },
 }
 
 export const CHARACTER_ORDER: CharacterId[] = [
@@ -145,4 +159,5 @@ export const CHARACTER_ORDER: CharacterId[] = [
   'lennard',
   'erim',
   'david',
+  'sofia',
 ]

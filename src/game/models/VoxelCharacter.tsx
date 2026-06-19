@@ -77,6 +77,28 @@ function Hair({ style, color, headY, headSize }: {
           </mesh>
         </group>
       )
+    case 'bob':
+      // Clean chin-length bob — a normal, tidy cut.
+      return (
+        <group>
+          <mesh castShadow position={[0, top, 0]}>
+            <boxGeometry args={[s * 1.1, s * 0.4, s * 1.1]} />
+            <meshStandardMaterial color={color} roughness={0.82} />
+          </mesh>
+          {/* sides framing the face, stopping around the jaw */}
+          {[-1, 1].map((sgn) => (
+            <mesh key={sgn} castShadow position={[sgn * s * 0.56, headY + s * 0.04, -s * 0.04]}>
+              <boxGeometry args={[s * 0.16, s * 0.78, s * 1.04]} />
+              <meshStandardMaterial color={color} roughness={0.82} />
+            </mesh>
+          ))}
+          {/* back */}
+          <mesh castShadow position={[0, headY + s * 0.02, -s * 0.54]}>
+            <boxGeometry args={[s * 1.1, s * 0.92, s * 0.2]} />
+            <meshStandardMaterial color={color} roughness={0.82} />
+          </mesh>
+        </group>
+      )
     case 'long':
       // Full hair falling past the shoulders.
       return (

@@ -13,6 +13,7 @@ const STYLE: Record<PowerupType, { color: string; emissive: string; opacity: num
   repair: { color: '#2effa6', emissive: '#1bd07e', opacity: 1 },
   shield: { color: '#8fd0ff', emissive: '#5ab8ff', opacity: 0.78 },
   emp: { color: '#c879ff', emissive: '#a64dff', opacity: 1 },
+  cloak: { color: '#d9c8ff', emissive: '#9d7bff', opacity: 0.5 },
 }
 
 function geometryFor(type: PowerupType): THREE.BufferGeometry {
@@ -25,6 +26,8 @@ function geometryFor(type: PowerupType): THREE.BufferGeometry {
       return new THREE.IcosahedronGeometry(0.75, 0)
     case 'emp':
       return new THREE.TorusGeometry(0.6, 0.22, 8, 16)
+    case 'cloak':
+      return new THREE.OctahedronGeometry(0.78, 0)
   }
 }
 

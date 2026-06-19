@@ -28,6 +28,8 @@ export const POWER = {
   nitroMult: 1.55,
   shieldDuration: 6,
   empRadius: 24,
+  /** Cloak: invisible to police (lose all line-of-sight) for this long. */
+  cloakDuration: 6.5,
   bannerTime: 2.4,
 } as const
 
@@ -77,6 +79,7 @@ export function updatePowerups(state: SimState, dt: number): void {
 
   if (state.power.boost > 0) state.power.boost = Math.max(0, state.power.boost - dt)
   if (state.power.shield > 0) state.power.shield = Math.max(0, state.power.shield - dt)
+  if (state.power.cloak > 0) state.power.cloak = Math.max(0, state.power.cloak - dt)
   if (state.power.banner > 0) state.power.banner = Math.max(0, state.power.banner - dt)
 
   const r2 = POWER.pickupRadius * POWER.pickupRadius
@@ -93,7 +96,7 @@ export function updatePowerups(state: SimState, dt: number): void {
   }
 }
 
-function applyEffect(state: SimState, type: 'nitro' | 'repair' | 'shield' | 'emp'): void {
+function applyEffect(state: SimState, type: 'nitro' | 'repair' | 'shield' | 'emp' | 'cloak'): void {
   const p = state.player
   switch (type) {
     case 'nitro':
@@ -101,6 +104,9 @@ function applyEffect(state: SimState, type: 'nitro' | 'repair' | 'shield' | 'emp
       break
     case 'shield':
       state.power.shield = POWER.shieldDuration
+      break
+    case 'cloak':
+      state.power.cloak = POWER.cloakDuration
       break
     case 'repair':
       if (p.mode === 'vehicle') {
