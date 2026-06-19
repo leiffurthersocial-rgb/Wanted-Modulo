@@ -20,6 +20,8 @@ export interface DebugStore {
   noPolice: boolean
   /** Keep the nitro boost permanently topped up. */
   infiniteNitro: boolean
+  /** Police are destroyed by a single hit. */
+  oneHitCops: boolean
   /** Hold heat at `forceHeat` instead of letting it escalate/decay. */
   freezeHeat: boolean
 
@@ -36,10 +38,20 @@ export interface DebugStore {
   jumpMult: number
   /** Simulation time scale (slow-mo / fast-forward). */
   timeScale: number
+  /** Score-gain multiplier. */
+  scoreMult: number
 
   // --- One-shot actions (monotonic counters the sim watches) ---
   /** Bump to fully repair the player's current vehicle. */
   repairPing: number
+  /** Teleport the player back to the spawn plaza. */
+  teleportPing: number
+  /** Grant a fresh shield. */
+  grantShieldPing: number
+  /** Grant a fresh nitro boost. */
+  grantNitroPing: number
+  /** Detonate an EMP around the player (wipes nearby police). */
+  empPing: number
 
   set: <K extends keyof DebugState>(key: K, value: DebugState[K]) => void
   /** Restore all gameplay overrides to their neutral defaults. */
@@ -54,6 +66,7 @@ const DEFAULTS: DebugState = {
   noCapture: false,
   noPolice: false,
   infiniteNitro: false,
+  oneHitCops: false,
   freezeHeat: false,
   forceHeat: 5,
   speedMult: 1,
@@ -61,7 +74,12 @@ const DEFAULTS: DebugState = {
   gravityMult: 1,
   jumpMult: 1,
   timeScale: 1,
+  scoreMult: 1,
   repairPing: 0,
+  teleportPing: 0,
+  grantShieldPing: 0,
+  grantNitroPing: 0,
+  empPing: 0,
 }
 
 export const useDebugStore = create<DebugStore>()(

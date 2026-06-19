@@ -11,5 +11,5 @@ export const DEFAULT_BINDINGS: Record<InputAction, string[]> = {
   right: ['KeyD', 'ArrowRight'],
   handbrake: ['Space', 'ShiftLeft'],
   interact: ['KeyE'],
-  pause: ['Escape'],
+  pause: ['Escape', 'KeyP'],
 }

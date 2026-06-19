@@ -11,9 +11,10 @@ export function GameOver() {
   const stats = useGameStore((s) => s.stats)
   const startRun = useGameStore((s) => s.startRun)
   const toMenu = useGameStore((s) => s.toMenu)
+  const cheated = useGameStore((s) => s.cheated)
   const bestScore = useProgressionStore((s) => s.bestScore)
 
-  const isBest = stats.score >= bestScore && stats.score > 0
+  const isBest = !cheated && stats.score >= bestScore && stats.score > 0
 
   return (
     <div className="screen">
@@ -24,7 +25,9 @@ export function GameOver() {
       <div className="panel">
         <div className="final-score">
           <div className="n">{stats.score.toLocaleString()}</div>
-          <div className="l">{isBest ? '★ New Best Score ★' : 'Final Score'}</div>
+          <div className="l">
+            {cheated ? '🛠 Debug Run — Not Recorded' : isBest ? '★ New Best Score ★' : 'Final Score'}
+          </div>
         </div>
 
         <div className="stat-list">

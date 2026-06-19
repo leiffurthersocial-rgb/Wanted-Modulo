@@ -1,6 +1,7 @@
 import { SCORE } from '@/config/constants'
 import { ensurePropWindow, getProps } from '@/game/world/propModel'
 import { ensurePowerupWindow, getPowerups } from '@/game/world/powerupModel'
+import { getDebug } from '@/state/useDebugStore'
 import type { SimState } from './state'
 import { updatePlayer, type StepInput } from './systems/player'
 import {
@@ -63,6 +64,8 @@ export function stepSim(state: SimState, input: StepInput, dt: number): void {
   const dist = state.playerSpeed * dt
   state.acc.distance += dist
   if (state.playerSpeed > state.acc.topSpeed) state.acc.topSpeed = state.playerSpeed
-  state.score.value += dt * SCORE.perSecond * (1 + level * 0.5) + dist * SCORE.perDistanceUnit
+  const debug = getDebug()
+  const scoreMult = debug.enabled ? debug.scoreMult : 1
+  state.score.value += (dt * SCORE.perSecond * (1 + level * 0.5) + dist * SCORE.perDistanceUnit) * scoreMult
   state.flashPhase += dt
 }

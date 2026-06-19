@@ -232,7 +232,8 @@ export function manageFleet(state: SimState, dt: number, level: number): void {
 
 function damagePolice(state: SimState, u: PoliceUnit, amount: number): void {
   if (amount <= 0) return
-  u.health -= amount
+  const debug = getDebug()
+  u.health -= debug.enabled && debug.oneHitCops ? u.health + 1 : amount
   if (u.health <= 0) {
     u.active = false
     spawnExplosion(state, u.pos.x, sampleHeight(u.pos.x, u.pos.z) + 0.6, u.pos.z)

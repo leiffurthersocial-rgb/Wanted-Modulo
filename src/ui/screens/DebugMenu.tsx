@@ -71,7 +71,7 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
         </div>
         <p className="muted debug-note">
           {d.enabled
-            ? 'Overrides are ACTIVE — gameplay is no longer fair.'
+            ? '⚠ Overrides ACTIVE — this run will NOT count toward your best.'
             : 'Master switch is off — all overrides below are ignored.'}
         </p>
 
@@ -88,6 +88,10 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
           <div className="setting-row">
             <span className="k">No Police</span>
             <Toggle value={d.noPolice} onChange={(v) => d.set('noPolice', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">One-Hit Cop Kills</span>
+            <Toggle value={d.oneHitCops} onChange={(v) => d.set('oneHitCops', v)} />
           </div>
           <div className="setting-row">
             <span className="k">Infinite Nitro</span>
@@ -107,30 +111,58 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
           <h3>Physics</h3>
           <div className="setting-row">
             <span className="k">Vehicle Speed ({d.speedMult.toFixed(2)}×)</span>
-            <Slider value={d.speedMult} min={0.25} max={4} step={0.05} onChange={(v) => d.set('speedMult', v)} />
+            <Slider value={d.speedMult} min={0.25} max={20} step={0.25} onChange={(v) => d.set('speedMult', v)} />
           </div>
           <div className="setting-row">
             <span className="k">Foot Speed ({d.footSpeedMult.toFixed(2)}×)</span>
-            <Slider value={d.footSpeedMult} min={0.25} max={4} step={0.05} onChange={(v) => d.set('footSpeedMult', v)} />
+            <Slider value={d.footSpeedMult} min={0.25} max={20} step={0.25} onChange={(v) => d.set('footSpeedMult', v)} />
           </div>
           <div className="setting-row">
             <span className="k">Gravity ({d.gravityMult.toFixed(2)}×)</span>
-            <Slider value={d.gravityMult} min={0.1} max={3} step={0.05} onChange={(v) => d.set('gravityMult', v)} />
+            <Slider value={d.gravityMult} min={0} max={4} step={0.05} onChange={(v) => d.set('gravityMult', v)} />
           </div>
           <div className="setting-row">
             <span className="k">Ramp Launch ({d.jumpMult.toFixed(2)}×)</span>
-            <Slider value={d.jumpMult} min={0.5} max={4} step={0.05} onChange={(v) => d.set('jumpMult', v)} />
+            <Slider value={d.jumpMult} min={0.5} max={12} step={0.25} onChange={(v) => d.set('jumpMult', v)} />
           </div>
           <div className="setting-row">
             <span className="k">Time Scale ({d.timeScale.toFixed(2)}×)</span>
-            <Slider value={d.timeScale} min={0.1} max={2} step={0.05} onChange={(v) => d.set('timeScale', v)} />
+            <Slider value={d.timeScale} min={0.1} max={4} step={0.05} onChange={(v) => d.set('timeScale', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Score Multiplier ({d.scoreMult.toFixed(1)}×)</span>
+            <Slider value={d.scoreMult} min={0} max={20} step={0.5} onChange={(v) => d.set('scoreMult', v)} />
           </div>
 
           <h3>Actions</h3>
           <div className="setting-row">
-            <span className="k">Repair Vehicle Now</span>
+            <span className="k">Repair Vehicle</span>
             <button className="btn ghost small" onClick={() => d.set('repairPing', d.repairPing + 1)}>
               Repair
+            </button>
+          </div>
+          <div className="setting-row">
+            <span className="k">Teleport to Spawn</span>
+            <button className="btn ghost small" onClick={() => d.set('teleportPing', d.teleportPing + 1)}>
+              Teleport
+            </button>
+          </div>
+          <div className="setting-row">
+            <span className="k">Grant Shield</span>
+            <button className="btn ghost small" onClick={() => d.set('grantShieldPing', d.grantShieldPing + 1)}>
+              Shield
+            </button>
+          </div>
+          <div className="setting-row">
+            <span className="k">Grant Nitro</span>
+            <button className="btn ghost small" onClick={() => d.set('grantNitroPing', d.grantNitroPing + 1)}>
+              Nitro
+            </button>
+          </div>
+          <div className="setting-row">
+            <span className="k">EMP Blast</span>
+            <button className="btn ghost small" onClick={() => d.set('empPing', d.empPing + 1)}>
+              Detonate
             </button>
           </div>
         </div>

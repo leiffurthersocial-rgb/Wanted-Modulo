@@ -6,6 +6,7 @@ import { POLICE_CLASSES } from '@/game/vehicles/policeCatalog'
 import type { PropInstance } from '@/game/world/propModel'
 import { ensurePropWindow, getProps } from '@/game/world/propModel'
 import { ensurePowerupWindow, getPowerups, type Powerup, type PowerupType } from '@/game/world/powerupModel'
+import { resetDebugActionPings } from '@/game/sim/systems/powerups'
 import type { PropType } from '@/game/world/propCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import { PARTICLES, PLAYER, POLICE } from '@/config/constants'
@@ -212,6 +213,8 @@ export function createSimState(): SimState {
   // Seed the streaming prop + powerup windows around the spawn.
   ensurePropWindow(0, 0)
   ensurePowerupWindow(0, 0)
+  // Baseline debug action counters so persisted ones don't fire at run start.
+  resetDebugActionPings()
   const vehicles: VehicleEntity[] = VEHICLE_SPAWNS.map((s) => ({
     def: s.def,
     pos: new THREE.Vector3(...s.position),

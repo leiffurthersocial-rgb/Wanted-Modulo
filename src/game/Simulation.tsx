@@ -50,6 +50,9 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     const dt = Math.min(delta * scale, SIM.maxDt)
     const store = useGameStore.getState()
 
+    // Any active debug override taints the run — it won't count toward bests.
+    if (debug.enabled && store.phase === 'playing' && !store.cheated) store.markCheated()
+
     // Pause toggle works in any phase.
     if (Input.consumePressed('pause')) {
       if (store.phase === 'playing') store.pause()

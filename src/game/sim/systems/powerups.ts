@@ -4,8 +4,22 @@ import type { SimState } from '@/game/sim/state'
 import { getDebug } from '@/state/useDebugStore'
 import { spawnExplosion } from './particles'
 
-/** Last repair-action counter we've serviced (debug "repair now" button). */
-let lastRepairPing = 0
+/** Last serviced values of the debug one-shot action counters. */
+const lastPing = { repair: 0, teleport: 0, shield: 0, nitro: 0, emp: 0 }
+
+/**
+ * Snapshots the current debug action counters as "already serviced" so that
+ * persisted counters from a previous session don't fire on a fresh run. Called
+ * by createSimState at the start of every run.
+ */
+export function resetDebugActionPings(): void {
+  const d = getDebug()
+  lastPing.repair = d.repairPing
+  lastPing.teleport = d.teleportPing
+  lastPing.shield = d.grantShieldPing
+  lastPing.nitro = d.grantNitroPing
+  lastPing.emp = d.empPing
+}
 
 /** Effect tuning. */
 export const POWER = {
@@ -30,15 +44,35 @@ export function updatePowerups(state: SimState, dt: number): void {
   const debug = getDebug()
   if (debug.enabled) {
     if (debug.infiniteNitro) state.power.boost = Math.max(state.power.boost, POWER.nitroDuration)
-    // One-shot "repair vehicle" action.
-    if (debug.repairPing !== lastRepairPing) {
-      lastRepairPing = debug.repairPing
+
+    // One-shot actions: fire when the counter advances (ignore reset-to-zero).
+    if (debug.repairPing > lastPing.repair) {
       if (p.mode === 'vehicle') {
         const v = state.vehicles[p.vehicleIndex]
         v.health = v.def.durability
         v.wrecked = false
       }
     }
+    if (debug.teleportPing > lastPing.teleport) {
+      p.pos.set(0, 0, 0)
+      if (p.mode === 'vehicle') {
+        const v = state.vehicles[p.vehicleIndex]
+        v.pos.set(0, 0, 0)
+        v.y = 0
+        v.vy = 0
+        v.state.speed = 0
+        v.state.slip = 0
+      }
+    }
+    if (debug.grantShieldPing > lastPing.shield) applyEffect(state, 'shield')
+    if (debug.grantNitroPing > lastPing.nitro) applyEffect(state, 'nitro')
+    if (debug.empPing > lastPing.emp) applyEffect(state, 'emp')
+
+    lastPing.repair = debug.repairPing
+    lastPing.teleport = debug.teleportPing
+    lastPing.shield = debug.grantShieldPing
+    lastPing.nitro = debug.grantNitroPing
+    lastPing.emp = debug.empPing
   }
 
   if (state.power.boost > 0) state.power.boost = Math.max(0, state.power.boost - dt)

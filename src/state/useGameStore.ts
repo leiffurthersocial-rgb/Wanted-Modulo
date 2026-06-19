@@ -40,6 +40,9 @@ interface GameStore {
   selectedCharacter: CharacterId
   stats: RunStats
   radar: RadarData
+  /** True once any debug override was active during the current run — its
+   *  result is not recorded to the lifetime stats / personal best. */
+  cheated: boolean
 
   setRadar: (radar: RadarData) => void
   setPhase: (phase: GamePhase) => void
@@ -47,6 +50,8 @@ interface GameStore {
   startRun: () => void
   pause: () => void
   resume: () => void
+  /** Flags the current run as debug-tainted (won't count toward bests). */
+  markCheated: () => void
   /** Push live stats from the simulation (throttled). */
   publishStats: (partial: Partial<RunStats>) => void
   endRun: () => void
@@ -58,18 +63,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedCharacter: 'robin',
   stats: emptyStats(),
   radar: { px: 0, pz: 0, units: [], helis: [] },
+  cheated: false,
 
   setRadar: (radar) => set({ radar }),
   setPhase: (phase) => set({ phase }),
   selectCharacter: (id) => set({ selectedCharacter: id }),
 
-  startRun: () => set({ phase: 'playing', stats: emptyStats() }),
+  startRun: () => set({ phase: 'playing', stats: emptyStats(), cheated: false }),
 
   pause: () => {
     if (get().phase === 'playing') set({ phase: 'paused' })
   },
   resume: () => {
     if (get().phase === 'paused') set({ phase: 'playing' })
+  },
+
+  markCheated: () => {
+    if (!get().cheated) set({ cheated: true })
   },
 
   publishStats: (partial) =>
@@ -80,7 +90,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // bonus and lock it in.
     const stats = { ...get().stats, capture: 1 }
     stats.score = Math.round(stats.score + stats.peakHeat * SCORE.peakHeatBonus)
-    useProgressionStore.getState().recordRun(stats)
+    // Debug-tainted runs are never recorded to the lifetime stats / best.
+    if (!get().cheated) useProgressionStore.getState().recordRun(stats)
     set({ phase: 'gameover', stats })
   },
 
