@@ -24,8 +24,11 @@ import { AutoQuality } from '@/game/world/AutoQuality'
  */
 export function Game() {
   const character = useGameStore((s) => s.selectedCharacter)
-  const shadows = useSettingsStore((s) => s.shadows)
+  const shadowsSetting = useSettingsStore((s) => s.shadows)
   const graphics = useSettingsStore((s) => s.graphics)
+  const batterySaver = useSettingsStore((s) => s.batterySaver)
+  // Battery saver forces the cheapest render path regardless of other settings.
+  const shadows = shadowsSetting && !batterySaver
 
   const musicVolume = useSettingsStore((s) => s.musicVolume)
   const effectsVolume = useSettingsStore((s) => s.effectsVolume)
@@ -46,6 +49,7 @@ export function Game() {
   }, [musicVolume, effectsVolume])
 
   const dpr = useMemo<[number, number]>(() => {
+    if (batterySaver) return [0.5, 0.75]
     switch (graphics) {
       case 'low':
         return [0.75, 1]
@@ -54,14 +58,14 @@ export function Game() {
       default:
         return [1, 2]
     }
-  }, [graphics])
+  }, [graphics, batterySaver])
 
   return (
     <Canvas
       shadows={shadows}
       dpr={dpr}
       camera={{ position: [0, 9, -13], fov: 60, near: 0.1, far: 1000 }}
-      gl={{ antialias: graphics !== 'low', powerPreference: 'high-performance' }}
+      gl={{ antialias: graphics !== 'low' && !batterySaver, powerPreference: batterySaver ? 'low-power' : 'high-performance' }}
     >
       <color attach="background" args={['#bfe3ff']} />
       <fog attach="fog" args={['#cdeaff', 150, 420]} />

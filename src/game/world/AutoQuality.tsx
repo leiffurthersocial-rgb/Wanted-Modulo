@@ -16,7 +16,16 @@ export function AutoQuality() {
   const baseDpr = useRef(gl.getPixelRatio())
 
   useFrame((_, delta) => {
-    const enabled = useSettingsStore.getState().autoQuality
+    const settings = useSettingsStore.getState()
+    // Battery saver pins quality (and pixel ratio) low and shrinks streaming.
+    if (settings.batterySaver) {
+      if (useQualityStore.getState().level !== 0.5) {
+        useQualityStore.getState().setLevel(0.5)
+        gl.setPixelRatio(Math.min(baseDpr.current, 0.75))
+      }
+      return
+    }
+    const enabled = settings.autoQuality
     if (!enabled) {
       if (useQualityStore.getState().level !== 1) {
         useQualityStore.getState().setLevel(1)

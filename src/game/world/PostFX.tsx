@@ -8,7 +8,8 @@ import { useSettingsStore } from '@/state/useSettingsStore'
  */
 export function PostFX() {
   const enabled = useSettingsStore((s) => s.postProcessing)
-  if (!enabled) return null
+  const batterySaver = useSettingsStore((s) => s.batterySaver)
+  if (!enabled || batterySaver) return null
   return (
     <EffectComposer multisampling={2}>
       <Bloom

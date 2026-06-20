@@ -48,6 +48,10 @@ export function Settings() {
           <Toggle value={s.autoQuality} onChange={(v) => s.set('autoQuality', v)} />
         </div>
         <div className="setting-row">
+          <span className="k">Battery Saver</span>
+          <Toggle value={s.batterySaver} onChange={(v) => s.set('batterySaver', v)} />
+        </div>
+        <div className="setting-row">
           <span className="k">Camera Shake</span>
           <Toggle value={s.cameraShake} onChange={(v) => s.set('cameraShake', v)} />
         </div>

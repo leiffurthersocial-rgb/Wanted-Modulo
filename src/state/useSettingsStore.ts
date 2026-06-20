@@ -13,6 +13,8 @@ interface SettingsStore {
   rumble: boolean
   /** Automatically lower quality when the frame rate drops. */
   autoQuality: boolean
+  /** Battery saver: force low pixel ratio, no bloom/shadows — long sessions. */
+  batterySaver: boolean
   /** Show the radar minimap. */
   minimap: boolean
   /** Camera field of view (degrees). */
@@ -43,6 +45,7 @@ export const useSettingsStore = create<SettingsStore>()(
       cameraShake: true,
       rumble: true,
       autoQuality: true,
+      batterySaver: false,
       minimap: true,
       fov: 60,
       cameraDistance: 1,

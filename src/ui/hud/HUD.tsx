@@ -98,39 +98,6 @@ function ChaseHud({ chase }: { chase: ChaseStats }) {
   )
 }
 
-/** Off-screen arrow + distance pointing to the suspect (you always know where they are). */
-function SuspectTracker({ chase }: { chase: ChaseStats }) {
-  return (
-    <div className="suspect-tracker">
-      <div className="suspect-arrow" style={{ transform: `rotate(${chase.suspectAngle}rad)` }}>
-        ▲
-      </div>
-      <div className="suspect-dist">{Math.round(chase.suspectDist)}m</div>
-    </div>
-  )
-}
-
-/**
- * A big marker pinned to the edge of the screen pointing toward the suspect when
- * they're far away / slipping the net — shows the player exactly which way to go.
- */
-function SuspectEdgePointer({ chase }: { chase: ChaseStats }) {
-  if (chase.suspectDist < 55) return null
-  const fleeing = chase.escapeWarn > 0.05
-  return (
-    <div className="edge-pointer-layer">
-      <div className="edge-pointer" style={{ transform: `translateX(-50%) rotate(${chase.suspectAngle}rad)` }}>
-        <div className={`edge-pointer-mark ${fleeing ? 'fleeing' : ''}`}>
-          <span className="ep-arrow">▲</span>
-          <span className="ep-dist" style={{ transform: `rotate(${-chase.suspectAngle}rad)` }}>
-            {Math.round(chase.suspectDist)}m
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function HUD() {
   const stats = useGameStore((s) => s.stats)
   const showMinimap = useSettingsStore((s) => s.minimap)
@@ -164,8 +131,6 @@ export function HUD() {
           </div>
           {!pursuit && <HeatMeter heat={stats.heat} />}
         </div>
-
-        {pursuit && stats.chase && <SuspectTracker chase={stats.chase} />}
       </div>
 
       <div className="hud-center">
@@ -214,8 +179,6 @@ export function HUD() {
           )}
         </div>
       </div>
-
-      {pursuit && stats.chase && <SuspectEdgePointer chase={stats.chase} />}
 
       {showMinimap && <Minimap />}
 
