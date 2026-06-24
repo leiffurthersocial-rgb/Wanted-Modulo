@@ -1,11 +1,20 @@
 import { useGameStore } from '@/state/useGameStore'
 import { useProgressionStore } from '@/state/useProgressionStore'
 import { HEAT_TABLE } from '@/game/sim/heatTable'
+import { TRACK_DEFS } from '@/game/world/track'
 
 function fmtTime(t: number): string {
   const m = Math.floor(t / 60)
   const s = Math.floor(t % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function fmtMs(ms: number): string {
+  if (!ms) return '—'
+  const s = ms / 1000
+  const m = Math.floor(s / 60)
+  const r = (s % 60).toFixed(2)
+  return m > 0 ? `${m}:${r.padStart(5, '0')}` : `${r}s`
 }
 
 export function Statistics() {
@@ -29,6 +38,16 @@ export function Statistics() {
           <div className="v">{p.totalRuns}</div>
           <div className="k">Total Time Survived</div>
           <div className="v">{fmtTime(p.totalTime)}</div>
+          <div className="k">Most Suspects Caught</div>
+          <div className="v">{p.bestCaught}</div>
+          <div className="k">Endless Best</div>
+          <div className="v">{Math.round(p.endlessBest)}m</div>
+          {TRACK_DEFS.map((t) => (
+            <div key={t.id} style={{ display: 'contents' }}>
+              <div className="k">{t.name} — Best Lap-Set</div>
+              <div className="v">{fmtMs(p.raceBest[t.id] ?? 0)}</div>
+            </div>
+          ))}
         </div>
       </div>
 

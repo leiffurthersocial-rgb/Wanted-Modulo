@@ -12,6 +12,7 @@ const Game = lazy(() => import('@/game/Game').then((m) => ({ default: m.Game }))
 const CharacterSelect = lazy(() =>
   import('@/ui/screens/CharacterSelect').then((m) => ({ default: m.CharacterSelect })),
 )
+const RaceSetup = lazy(() => import('@/ui/screens/RaceSetup').then((m) => ({ default: m.RaceSetup })))
 const Settings = lazy(() => import('@/ui/screens/Settings').then((m) => ({ default: m.Settings })))
 const Statistics = lazy(() => import('@/ui/screens/Statistics').then((m) => ({ default: m.Statistics })))
 const GameOver = lazy(() => import('@/ui/screens/GameOver').then((m) => ({ default: m.GameOver })))
@@ -48,6 +49,7 @@ export default function App() {
 
       {phase === 'menu' && <MainMenu />}
       {phase === 'characterSelect' && <CharacterSelect />}
+      {phase === 'raceSetup' && <RaceSetup />}
       {phase === 'settings' && <Settings />}
       {phase === 'statistics' && <Statistics />}
       {phase === 'gameover' && <GameOver />}

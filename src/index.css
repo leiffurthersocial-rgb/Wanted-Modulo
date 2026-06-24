@@ -932,3 +932,78 @@ canvas {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* ---------- Race / Endless ---------- */
+.btn.primary.race {
+  background: #2bd07b;
+  box-shadow: 0 6px 0 #1f9c5b, 0 10px 18px rgba(43, 208, 123, 0.32);
+}
+.btn.primary.race:active {
+  box-shadow: 0 1px 0 #1f9c5b, 0 4px 10px rgba(43, 208, 123, 0.3);
+}
+
+.race-countdown {
+  align-self: center;
+  font-size: clamp(3rem, 14vw, 8rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 6px 0 var(--accent-d), 0 10px 24px rgba(0, 0, 0, 0.3);
+  animation: pop-in 0.3s ease-out;
+}
+
+.race-pos {
+  align-self: center;
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: #fff;
+  background: var(--text-dim);
+  padding: 0.35rem 1.1rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 rgba(36, 48, 73, 0.3);
+}
+.race-pos.lead {
+  background: #2bd07b;
+  box-shadow: 0 4px 0 #1f9c5b;
+}
+
+.race-panel {
+  width: min(640px, 94vw);
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.race-section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0.8rem 0 0.5rem;
+}
+
+.track-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+@media (max-width: 620px) {
+  .track-grid { grid-template-columns: 1fr; }
+}
+
+.track-card {
+  background: #ffffff;
+  border: 3px solid #ffffff;
+  border-radius: 16px;
+  padding: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 6px 0 var(--edge-soft);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s ease;
+}
+.track-card:hover { transform: translateY(-3px); }
+.track-card.selected {
+  border-color: #2bd07b;
+  box-shadow: 0 6px 0 #1f9c5b;
+}
+.track-name { font-weight: 900; letter-spacing: 0.02em; }
+.track-blurb { font-size: 0.74rem; color: var(--text-dim); margin: 0.25rem 0 0.4rem; line-height: 1.35; }
+.track-meta { font-size: 0.7rem; font-weight: 800; color: var(--accent); }

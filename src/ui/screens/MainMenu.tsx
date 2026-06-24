@@ -16,6 +16,15 @@ export function MainMenu() {
     setMode(mode)
     setPhase('characterSelect')
   }
+  const startRun = useGameStore((s) => s.startRun)
+  const race = () => {
+    setMode('race')
+    setPhase('raceSetup')
+  }
+  const endless = () => {
+    setMode('endless')
+    startRun()
+  }
 
   return (
     <div className="screen">
@@ -31,6 +40,14 @@ export function MainMenu() {
         </button>
         <button className="btn primary alt" onClick={() => play('pursuit')}>
           🚔 Cop Chase
+        </button>
+      </div>
+      <div className="btn-row">
+        <button className="btn primary race" onClick={race}>
+          🏁 Race
+        </button>
+        <button className="btn primary race" onClick={endless}>
+          ♾ Endless
         </button>
       </div>
       <div className="btn-row">

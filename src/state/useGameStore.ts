@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import type { CharacterId, GameMode, GamePhase, RunStats } from '@/types'
+import type { BotDifficulty, CharacterId, GameMode, GamePhase, RunStats } from '@/types'
 import { SCORE } from '@/config/constants'
+import { TRACK_DEFS } from '@/game/world/track'
 import { useProgressionStore } from './useProgressionStore'
 
 const emptyStats = (mode: GameMode = 'survive'): RunStats => ({
@@ -25,6 +26,7 @@ const emptyStats = (mode: GameMode = 'survive'): RunStats => ({
   cloak: 0,
   mode,
   chase: null,
+  race: null,
 })
 
 export interface RadarBlip {
@@ -47,6 +49,9 @@ interface GameStore {
   selectedCharacter: CharacterId
   /** Which mode the next/current run uses. */
   mode: GameMode
+  /** Selected race track + bot difficulty. */
+  raceTrackId: string
+  raceDifficulty: BotDifficulty
   stats: RunStats
   radar: RadarData
   /** True once any debug override was active during the current run — its
@@ -57,6 +62,10 @@ interface GameStore {
   setPhase: (phase: GamePhase) => void
   selectCharacter: (id: CharacterId) => void
   setMode: (mode: GameMode) => void
+  setRaceTrack: (id: string) => void
+  setRaceDifficulty: (d: BotDifficulty) => void
+  /** Best time (ms, race) or distance (m, endless) for the given track. */
+  raceBestFor: (trackId: string, endless: boolean) => number
   startRun: () => void
   pause: () => void
   resume: () => void
@@ -72,6 +81,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   phase: 'menu',
   selectedCharacter: 'robin',
   mode: 'survive',
+  raceTrackId: TRACK_DEFS[0].id,
+  raceDifficulty: 'medium',
   stats: emptyStats(),
   radar: { px: 0, pz: 0, heading: 0, units: [], helis: [] },
   cheated: false,
@@ -80,6 +91,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setPhase: (phase) => set({ phase }),
   selectCharacter: (id) => set({ selectedCharacter: id }),
   setMode: (mode) => set({ mode }),
+  setRaceTrack: (id) => set({ raceTrackId: id }),
+  setRaceDifficulty: (d) => set({ raceDifficulty: d }),
+  raceBestFor: (trackId, endless) =>
+    endless
+      ? useProgressionStore.getState().endlessBest
+      : useProgressionStore.getState().raceBest[trackId] ?? 0,
 
   startRun: () =>
     set((s) => ({ phase: 'playing', stats: emptyStats(s.mode), cheated: false })),
@@ -100,6 +117,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   endRun: () => {
     const cur = get().stats
+    if (cur.mode === 'race' || cur.mode === 'endless') {
+      const r = cur.race
+      if (r && !get().cheated) {
+        if (cur.mode === 'endless') {
+          useProgressionStore.getState().recordEndless(Math.round(r.distance))
+        } else if (r.won) {
+          useProgressionStore.getState().recordRace(get().raceTrackId, Math.round(r.time * 1000))
+        }
+      }
+      set({ phase: 'gameover', stats: cur })
+      return
+    }
     if (cur.mode === 'pursuit') {
       // Cop-chase: score is finalised live (per catch). Record to the separate
       // pursuit best so it never mixes with the survive personal best.

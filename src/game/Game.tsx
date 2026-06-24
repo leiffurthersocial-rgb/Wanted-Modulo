@@ -17,6 +17,7 @@ import { PropField } from '@/game/entities/PropField'
 import { PowerupField } from '@/game/entities/PowerupField'
 import { Landmarks } from '@/game/world/Landmarks'
 import { AutoQuality } from '@/game/world/AutoQuality'
+import { RaceScene } from '@/game/race/RaceScene'
 
 /**
  * The R3F Canvas scene root. Stays mounted across play/pause so resuming is
@@ -24,6 +25,8 @@ import { AutoQuality } from '@/game/world/AutoQuality'
  */
 export function Game() {
   const character = useGameStore((s) => s.selectedCharacter)
+  const mode = useGameStore((s) => s.mode)
+  const isRace = mode === 'race' || mode === 'endless'
   const shadowsSetting = useSettingsStore((s) => s.shadows)
   const graphics = useSettingsStore((s) => s.graphics)
   const batterySaver = useSettingsStore((s) => s.batterySaver)
@@ -70,17 +73,23 @@ export function Game() {
       <color attach="background" args={['#bfe3ff']} />
       <fog attach="fog" args={['#cdeaff', 150, 420]} />
       <Suspense fallback={null}>
-        <Environment />
-        <Ground />
-        <Bridges />
-        <City />
-        <Landmarks />
-        <PropField />
-        <PowerupField />
-        <Simulation characterId={character} />
-        <PolicePool />
-        <HeliPool />
-        <ParticleField />
+        {isRace ? (
+          <RaceScene />
+        ) : (
+          <>
+            <Environment />
+            <Ground />
+            <Bridges />
+            <City />
+            <Landmarks />
+            <PropField />
+            <PowerupField />
+            <Simulation characterId={character} />
+            <PolicePool />
+            <HeliPool />
+            <ParticleField />
+          </>
+        )}
         <PostFX />
         <AutoQuality />
       </Suspense>

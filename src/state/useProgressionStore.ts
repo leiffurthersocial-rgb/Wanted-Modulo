@@ -11,9 +11,15 @@ interface ProgressionStore {
   /** Cop-chase mode: most suspects caught in a run, and best chase score. */
   bestCaught: number
   bestChaseScore: number
+  /** Race mode: best lap-total time (ms) per track id. */
+  raceBest: Record<string, number>
+  /** Endless mode: furthest distance (m). */
+  endlessBest: number
 
   recordRun: (stats: RunStats) => void
   recordChase: (caught: number, score: number) => void
+  recordRace: (trackId: string, timeMs: number) => void
+  recordEndless: (distance: number) => void
   reset: () => void
 }
 
@@ -32,6 +38,8 @@ export const useProgressionStore = create<ProgressionStore>()(
       peakHeatEver: 0,
       bestCaught: 0,
       bestChaseScore: 0,
+      raceBest: {},
+      endlessBest: 0,
 
       recordRun: (stats) =>
         set((s) => ({
@@ -48,6 +56,16 @@ export const useProgressionStore = create<ProgressionStore>()(
           bestChaseScore: Math.max(s.bestChaseScore, score),
         })),
 
+      recordRace: (trackId, timeMs) =>
+        set((s) => {
+          const prev = s.raceBest[trackId]
+          if (prev !== undefined && prev <= timeMs) return s
+          return { raceBest: { ...s.raceBest, [trackId]: timeMs } }
+        }),
+
+      recordEndless: (distance) =>
+        set((s) => ({ endlessBest: Math.max(s.endlessBest, distance) })),
+
       reset: () =>
         set({
           bestScore: 0,
@@ -57,6 +75,8 @@ export const useProgressionStore = create<ProgressionStore>()(
           peakHeatEver: 0,
           bestCaught: 0,
           bestChaseScore: 0,
+          raceBest: {},
+          endlessBest: 0,
         }),
     }),
     { name: 'wanted-modulo:progression' },

@@ -4,6 +4,7 @@
 export type GamePhase =
   | 'menu'
   | 'characterSelect'
+  | 'raceSetup'
   | 'settings'
   | 'statistics'
   | 'playing'
@@ -11,7 +12,10 @@ export type GamePhase =
   | 'gameover'
 
 /** Which game mode a run uses. */
-export type GameMode = 'survive' | 'pursuit'
+export type GameMode = 'survive' | 'pursuit' | 'race' | 'endless'
+
+/** Bot opponent difficulty for Race mode. */
+export type BotDifficulty = 'easy' | 'medium' | 'hard'
 
 /** Logical input actions, decoupled from physical keys (see InputManager). */
 export type InputAction =
@@ -120,6 +124,39 @@ export interface RunStats {
   mode: GameMode
   /** Cop-chase stats (present only in pursuit mode). */
   chase: ChaseStats | null
+  /** Race / endless stats (present only in those modes). */
+  race: RaceStats | null
+}
+
+/** Live HUD stats for Race + Endless modes. */
+export interface RaceStats {
+  /** True for the solo endless mode (false for head-to-head race). */
+  endless: boolean
+  /** Start countdown (seconds, 3..0); 0 once racing. */
+  countdown: number
+  /** Elapsed race time (seconds). */
+  time: number
+  /** Current lap (1-based) and total laps (race only). */
+  lap: number
+  totalLaps: number
+  /** Player position: 1 = leading, 2 = behind (race only). */
+  position: number
+  /** Player + bot progress along the whole race (0..1, race only). */
+  playerProgress: number
+  botProgress: number
+  /** Distance travelled (metres) — the endless score. */
+  distance: number
+  /** Current speed readout. */
+  speed: number
+  /** Best time (ms, race) or best distance (m, endless) for this track. */
+  best: number
+  /** Brief "recovering after a fall" timer (s). */
+  recover: number
+  /** Run finished + outcome. */
+  finished: boolean
+  won: boolean
+  /** Fell off the track (endless game-over). */
+  fell: boolean
 }
 
 /** Live HUD stats for the cop-chase (pursuit) mode. */

@@ -1,8 +1,67 @@
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { HEAT_TABLE } from '@/game/sim/heatTable'
-import type { ChaseStats } from '@/types'
+import type { ChaseStats, RaceStats } from '@/types'
 import { Minimap } from './Minimap'
+
+function fmtRaceTime(t: number): string {
+  const m = Math.floor(t / 60)
+  const s = (t % 60).toFixed(1)
+  return `${m}:${s.padStart(4, '0')}`
+}
+
+/** HUD for Race + Endless modes. */
+function RaceHud({ race }: { race: RaceStats }) {
+  if (race.countdown > 0) {
+    const n = Math.ceil(race.countdown)
+    return <div className="race-countdown">{n === 0 ? 'GO!' : n}</div>
+  }
+  return (
+    <>
+      {race.recover > 0 && <div className="status-banner spotted">↩ BACK ON TRACK</div>}
+      {!race.endless && (
+        <div className={`race-pos ${race.position === 1 ? 'lead' : ''}`}>
+          {race.position === 1 ? '1st 🏁' : '2nd'}
+        </div>
+      )}
+    </>
+  )
+}
+
+/** Top stat row for Race + Endless modes. */
+function RaceTop({ race }: { race: RaceStats }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      {race.endless ? (
+        <>
+          <div className="hud-stat">
+            <div className="label">Distance</div>
+            <div className="value">{Math.round(race.distance)}m</div>
+          </div>
+          <div className="hud-stat">
+            <div className="label">Best</div>
+            <div className="value">{Math.round(race.best)}m</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="hud-stat">
+            <div className="label">Lap</div>
+            <div className="value">{race.lap}/{race.totalLaps}</div>
+          </div>
+          <div className="hud-stat">
+            <div className="label">Time</div>
+            <div className="value">{fmtRaceTime(race.time)}</div>
+          </div>
+        </>
+      )}
+      <div className="hud-stat">
+        <div className="label">Speed</div>
+        <div className="value">{Math.round(race.speed * 7)}</div>
+      </div>
+    </div>
+  )
+}
 
 const POWER_LABEL: Record<string, string> = {
   nitro: '🚀 NITRO',
@@ -104,6 +163,26 @@ export function HUD() {
   const speedReadout = Math.round(stats.speed * 7)
   const capturePct = Math.round(stats.capture * 100)
   const pursuit = stats.mode === 'pursuit'
+  const isRace = stats.mode === 'race' || stats.mode === 'endless'
+
+  if (isRace) {
+    if (!stats.race) return <div className="hud" />
+    return (
+      <div className="hud">
+        <div className="hud-top">
+          <RaceTop race={stats.race} />
+        </div>
+        <div className="hud-center">
+          <RaceHud race={stats.race} />
+        </div>
+        <div className="hud-hint">
+          {stats.race.endless
+            ? 'A / D or ←/→ to steer · you can’t stop — don’t fall off! · ESC pause'
+            : 'WASD drive · Space drift · beat the bot · ESC pause'}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`hud ${stats.cloak > 0 ? 'cloaked' : ''}`}>
