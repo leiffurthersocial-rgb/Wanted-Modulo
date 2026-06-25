@@ -172,8 +172,8 @@ export function HUD() {
         </div>
         <div className="hud-hint">
           {stats.race.endless
-            ? 'A / D or ←/→ to steer · you can’t stop — don’t fall off! · ESC pause'
-            : 'WASD drive · Space drift · dodge the barriers · beat your best lap · ESC pause'}
+            ? 'A / D or ←/→ to steer · you can’t stop — don’t fall off! · P pause'
+            : 'WASD drive · Space drift · dodge the barriers · beat your best lap · P pause'}
         </div>
       </div>
     )
@@ -258,8 +258,8 @@ export function HUD() {
 
       <div className="hud-hint">
         {pursuit
-          ? 'WASD · Space drift · ram or tail the suspect · ESC pause'
-          : `WASD · ${stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · ESC pause`}
+          ? 'WASD · Space drift · ram or tail the suspect · P pause'
+          : `WASD · ${stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · P pause`}
       </div>
     </div>
   )

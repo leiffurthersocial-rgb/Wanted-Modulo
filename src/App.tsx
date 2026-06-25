@@ -32,6 +32,7 @@ function Loading() {
  */
 export default function App() {
   const phase = useGameStore((s) => s.phase)
+  const runId = useGameStore((s) => s.runId)
   const mobileControls = useSettingsStore((s) => s.mobileControls)
   const inRun = phase === 'playing' || phase === 'paused'
   const showTouch = inRun && mobileControls
@@ -40,7 +41,8 @@ export default function App() {
     <Suspense fallback={<Loading />}>
       {inRun && (
         <>
-          <Game />
+          {/* Keyed on runId so "Try Again" fully remounts the scene/sim. */}
+          <Game key={runId} />
           <HUD />
           {showTouch && <TouchControls />}
           {phase === 'paused' && <PauseMenu />}

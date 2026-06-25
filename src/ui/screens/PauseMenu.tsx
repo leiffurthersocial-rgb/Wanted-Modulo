@@ -4,6 +4,7 @@ import { DebugMenu, useTripleTap } from './DebugMenu'
 
 export function PauseMenu() {
   const resume = useGameStore((s) => s.resume)
+  const startRun = useGameStore((s) => s.startRun)
   const endRun = useGameStore((s) => s.endRun)
   const [showDebug, setShowDebug] = useState(false)
   const onTitleTap = useTripleTap(() => setShowDebug(true))
@@ -17,11 +18,14 @@ export function PauseMenu() {
         <button className="btn primary" onClick={resume}>
           Resume
         </button>
+        <button className="btn primary alt" onClick={startRun}>
+          Try Again
+        </button>
         <button className="btn ghost" onClick={endRun}>
           End Run
         </button>
       </div>
-      <div className="muted">Press ESC to resume</div>
+      <div className="muted">Press P to resume</div>
 
       {showDebug && <DebugMenu onClose={() => setShowDebug(false)} />}
     </div>

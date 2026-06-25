@@ -53,6 +53,8 @@ interface GameStore {
   raceTrackId: string
   stats: RunStats
   radar: RadarData
+  /** Bumped on every startRun so the scene remounts for a clean restart. */
+  runId: number
   /** True once any debug override was active during the current run — its
    *  result is not recorded to the lifetime stats / personal best. */
   cheated: boolean
@@ -82,6 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   raceTrackId: TRACK_DEFS[0].id,
   stats: emptyStats(),
   radar: { px: 0, pz: 0, heading: 0, units: [], helis: [] },
+  runId: 0,
   cheated: false,
 
   setRadar: (radar) => set({ radar }),
@@ -95,7 +98,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       : useProgressionStore.getState().raceBest[trackId] ?? 0,
 
   startRun: () =>
-    set((s) => ({ phase: 'playing', stats: emptyStats(s.mode), cheated: false })),
+    set((s) => ({ phase: 'playing', stats: emptyStats(s.mode), cheated: false, runId: s.runId + 1 })),
 
   pause: () => {
     if (get().phase === 'playing') set({ phase: 'paused' })

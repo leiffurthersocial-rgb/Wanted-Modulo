@@ -32,7 +32,7 @@ React · TypeScript · Three.js · React Three Fiber · Zustand · Vite — depl
 | Move | `WASD` / Arrow Keys |
 | Handbrake / Drift | `Space` / `Shift` |
 | Enter / Exit Vehicle | `E` |
-| Pause | `ESC` |
+| Pause | `P` / `ESC` |
 
 On foot you can wade and **swim across rivers** and climb back out on the far
 bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
