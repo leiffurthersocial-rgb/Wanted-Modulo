@@ -40,18 +40,24 @@ bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
 
 ## Race & Endless
 
-Six hand-built circuits — Sunset Oval, Switchback Ridge, Grand Loop, Canyon Rush,
-Skyline Weave, and the brutal **Gauntlet** — that **roll up and down** over hills
-and plunge through dips, each with **launch ramps** for big air and **barriers** to
-slalom. Race is a **solo, single-lap time trial**: there's no rival, just the clock
-and your **best lap**. There are no invisible walls, so run wide and you'll fall
-clean off the edge; clip a barrier and you'll lose nearly all your speed.
-**Endless** mode shares the rolling terrain and ramps, and ramps up speed and
-curviness the further you survive.
+Eight hand-built circuits — from the friendly **Sunset Oval** through Switchback
+Ridge, Grand Loop, Canyon Rush, Skyline Weave and Riptide Coast, up to the brutal
+**Gauntlet** and the near-undriveable **Impossible** — that **roll up and down**
+over hills, plunge through dips, and string **launch ramps** over real **gaps** in
+the deck: clear the jump or fall in. **Barriers** force a slalom on top of that.
+Race is a **solo, single-lap time trial**: just the clock and your **best lap**.
+There are no invisible walls, so run wide and you'll fall clean off the edge; clip
+a barrier and you'll lose nearly all your speed. **Endless** shares the rolling
+terrain and ramps, ramping up speed and curviness the further you survive.
 
-In **Survive**, a sufficiently angry police force starts dropping **ground bombs**
-behind you — they arm, blink, and detonate on contact (or after a fuse), damaging
-your car. Keep moving and don't backtrack over one.
+In **Survive**, the police never spawn in front of you — they close in from behind
+and to the sides — and they arrive **fast**, escalating through a reworked heat
+curve (fleeing fast and causing mayhem cranks it; truly hiding cools it). Threats
+stack from dark-liveried patrol cars up through interceptors, heavy units, SWAT
+vans and armored **military** units, plus helicopters and police **ground bombs**
+that arm, blink and detonate. Counter-play: **CLOAK** hides you from cops *and*
+helicopters (they lose you completely), and the buffed **EMP** clears a wide pack
+of cars and now knocks helicopters out of the sky.
 
 ## World
 

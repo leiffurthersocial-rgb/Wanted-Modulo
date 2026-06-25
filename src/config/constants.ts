@@ -87,15 +87,19 @@ export const DAMAGE = {
 
 export const HEAT = {
   /** Heat (float) rises this fast per second while the player is spotted. */
-  spottedRise: 0.13,
+  spottedRise: 0.22,
+  /** Extra heat-rise per (unit/s) of speed while spotted — fleeing fast is loud. */
+  spottedSpeedRise: 0.004,
+  /** One-off heat bump when the player wrecks a police unit (mayhem). */
+  mayhemBump: 0.25,
   /** Heat decays this fast per second while hidden (down to the floor). */
-  hiddenDecay: 0.18,
+  hiddenDecay: 0.3,
   /** Seconds of survival required to push the heat floor up by one level. */
-  floorTimePerLevel: 26,
+  floorTimePerLevel: 42,
   /** Grace period (s) after losing sight before units enter SEARCH. */
-  lostGrace: 2.2,
+  lostGrace: 2.0,
   /** Seconds a search persists before units give up and heat can fall. */
-  searchTimeout: 9,
+  searchTimeout: 8,
 } as const
 
 export const POLICE = {
@@ -105,10 +109,12 @@ export const POLICE = {
   sightRange: 70,
   sightFov: 1.15,
   /** Distance from the player at which new units spawn (off-screen-ish). */
-  spawnRadius: 95,
+  spawnRadius: 88,
   despawnRadius: 170,
-  /** Seconds between spawn attempts when below the heat target. */
-  spawnInterval: 1.1,
+  /** Seconds between spawn attempts when below the heat target (low = sooner). */
+  spawnInterval: 0.55,
+  /** Half-angle (radians) of the forward cone kept clear of spawns. */
+  frontClearCone: 1.15,
   /** Steering gain converting heading error -> steer input. */
   steerGain: 2.4,
   /** Lead time (s) for predicting the player's future position. */

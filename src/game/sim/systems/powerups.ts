@@ -27,8 +27,9 @@ export const POWER = {
   nitroDuration: 3.6,
   nitroMult: 1.55,
   shieldDuration: 6,
-  empRadius: 24,
-  /** Cloak: invisible to police (lose all line-of-sight) for this long. */
+  /** EMP blast radius — large enough to clear a surrounding pack. */
+  empRadius: 42,
+  /** Cloak: invisible to police AND helicopters (they lose you) for this long. */
   cloakDuration: 6.5,
   bannerTime: 2.4,
 } as const
@@ -124,6 +125,18 @@ function applyEffect(state: SimState, type: 'nitro' | 'repair' | 'shield' | 'emp
         if (dx * dx + dz * dz > r2) continue
         u.active = false
         spawnExplosion(state, u.pos.x, sampleHeight(u.pos.x, u.pos.z) + 0.6, u.pos.z)
+        state.score.cops++
+        state.score.value += SCORE.copDestroyed
+      }
+      // EMP now also fries helicopters in range — they drop out of the sky.
+      for (const h of state.helis) {
+        if (!h.active) continue
+        const dx = h.pos.x - p.pos.x
+        const dz = h.pos.z - p.pos.z
+        if (dx * dx + dz * dz > r2) continue
+        h.active = false
+        h.strikeFuse = -1
+        spawnExplosion(state, h.pos.x, sampleHeight(h.pos.x, h.pos.z) + 0.6, h.pos.z)
         state.score.cops++
         state.score.value += SCORE.copDestroyed
       }

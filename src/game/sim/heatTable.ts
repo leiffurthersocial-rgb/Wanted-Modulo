@@ -29,7 +29,7 @@ export const HEAT_TABLE: HeatTier[] = [
   { name: 'Hunted', ground: 4, helis: 0, classes: ['patrol'], speedMult: 1.02, aggression: 0.4, roadblocks: true, attackHeli: false },
   { name: 'Pursued', ground: 6, helis: 0, classes: ['patrol', 'interceptor'], speedMult: 1.05, aggression: 0.5, roadblocks: true, attackHeli: false },
   { name: 'Tracked', ground: 7, helis: 1, classes: ['patrol', 'interceptor', 'heavy'], speedMult: 1.07, aggression: 0.58, roadblocks: true, attackHeli: false },
-  { name: 'Surrounded', ground: 9, helis: 1, classes: ['interceptor', 'heavy', 'swat'], speedMult: 1.1, aggression: 0.66, roadblocks: true, attackHeli: false },
+  { name: 'Surrounded', ground: 9, helis: 1, classes: ['interceptor', 'heavy', 'swat', 'military'], speedMult: 1.1, aggression: 0.66, roadblocks: true, attackHeli: false },
   { name: 'Marked', ground: 11, helis: 1, classes: ['interceptor', 'heavy', 'swat', 'military'], speedMult: 1.12, aggression: 0.74, roadblocks: true, attackHeli: false },
   { name: 'Besieged', ground: 13, helis: 2, classes: ['interceptor', 'heavy', 'swat', 'military'], speedMult: 1.15, aggression: 0.82, roadblocks: true, attackHeli: false },
   { name: 'Hellfire', ground: 15, helis: 2, classes: ['interceptor', 'swat', 'military'], speedMult: 1.18, aggression: 0.9, roadblocks: true, attackHeli: true },

@@ -6,6 +6,7 @@ import {
   type BakedTrack,
   getTrack,
   groundAt,
+  inGap,
   makeEndless,
   project,
   rampAt,
@@ -200,8 +201,8 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
       player.y += player.vy * dt
       if (player.y <= ground && player.vy <= 0) {
         const offEdge = Math.abs(proj.lateral) - track.half - CAR_HALF
-        if (offEdge > 0) {
-          // Overshot the landing and came down off the track — fall off.
+        if (offEdge > 0 || inGap(track, proj.s)) {
+          // Overshot the landing — came down off the edge or short into a gap.
           player.airborne = false
           player.falling = true
         } else {
@@ -232,6 +233,10 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
           player.airborne = true
           const slope = prevR.ramp.height / prevR.ramp.len
           player.vy = Math.abs(player.state.speed) * slope + 1.5
+        } else if (inGap(track, proj.s)) {
+          // Reached a hole without enough air to clear it — drop in.
+          player.falling = true
+          player.vy = -1
         } else {
           player.y = ground
         }

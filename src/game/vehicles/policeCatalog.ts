@@ -46,9 +46,11 @@ export const POLICE_CLASSES: Record<PoliceClassId, PoliceClass> = {
   patrol: {
     id: 'patrol',
     name: 'Patrol',
-    def: def('patrol', 27, 13, 2.1, 1.0, 90, { length: 4.0, width: 1.9, height: 1.45 }),
-    body: '#f2f4f8',
-    accent: '#1c2740',
+    def: def('patrol', 28, 14, 2.1, 1.0, 90, { length: 4.0, width: 1.9, height: 1.45 }),
+    // Dark navy + blue stripe — never white, so it can't be mistaken for a
+    // stealable civilian car.
+    body: '#13284d',
+    accent: '#3f7fff',
     lightbar: true,
     minHeat: 1,
   },
@@ -75,18 +77,18 @@ export const POLICE_CLASSES: Record<PoliceClassId, PoliceClass> = {
     name: 'SWAT Van',
     def: def('swat', 24, 10, 1.5, 1.9, 220, { length: 4.7, width: 2.15, height: 2.05 }),
     body: '#2a2f36',
-    accent: '#c0c6d0',
+    accent: '#8b93a4',
     lightbar: true,
     minHeat: 5,
   },
   military: {
     id: 'military',
-    name: 'Armored',
-    def: def('military', 26, 12, 1.5, 2.3, 420, { length: 4.8, width: 2.25, height: 2.0 }),
-    body: '#3f4a36',
-    accent: '#26301f',
+    name: 'Military',
+    def: def('military', 27, 13, 1.5, 2.4, 460, { length: 4.9, width: 2.3, height: 2.05 }),
+    body: '#3f4a2c',
+    accent: '#262e1b',
     lightbar: false,
-    minHeat: 6,
+    minHeat: 5,
   },
 }
 

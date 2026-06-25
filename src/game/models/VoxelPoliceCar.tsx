@@ -42,29 +42,49 @@ export function VoxelPoliceCar({ classId, slot }: Props) {
         <meshStandardMaterial color={cls.accent} roughness={0.5} />
       </mesh>
 
-      {/* Lightbar */}
-      <group position={[0, H + 0.12, L * 0.05]}>
-        <mesh position={[-0.26, 0, 0]}>
-          <boxGeometry args={[0.42, 0.2, 0.5]} />
-          <meshStandardMaterial
-            ref={leftRef}
-            color="#ff2b2b"
-            emissive="#ff0000"
-            emissiveIntensity={1.4}
-            toneMapped={false}
-          />
-        </mesh>
-        <mesh position={[0.26, 0, 0]}>
-          <boxGeometry args={[0.42, 0.2, 0.5]} />
-          <meshStandardMaterial
-            ref={rightRef}
-            color="#2b6bff"
-            emissive="#0030ff"
-            emissiveIntensity={0.2}
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
+      {cls.lightbar ? (
+        /* Twin-bulb police lightbar */
+        <group position={[0, H + 0.12, L * 0.05]}>
+          <mesh position={[-0.26, 0, 0]}>
+            <boxGeometry args={[0.42, 0.2, 0.5]} />
+            <meshStandardMaterial
+              ref={leftRef}
+              color="#ff2b2b"
+              emissive="#ff0000"
+              emissiveIntensity={1.4}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh position={[0.26, 0, 0]}>
+            <boxGeometry args={[0.42, 0.2, 0.5]} />
+            <meshStandardMaterial
+              ref={rightRef}
+              color="#2b6bff"
+              emissive="#0030ff"
+              emissiveIntensity={0.2}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      ) : (
+        /* Military: armored roof + a single amber beacon */
+        <group position={[0, H + 0.1, 0]}>
+          <mesh position={[0, 0, 0]} castShadow>
+            <boxGeometry args={[W * 0.7, 0.34, L * 0.5]} />
+            <meshStandardMaterial color={cls.accent} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.3, 0]}>
+            <boxGeometry args={[0.32, 0.24, 0.32]} />
+            <meshStandardMaterial
+              ref={leftRef}
+              color="#ffb020"
+              emissive="#ff8c00"
+              emissiveIntensity={1.4}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      )}
     </group>
   )
 }

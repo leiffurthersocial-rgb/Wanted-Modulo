@@ -27,7 +27,9 @@ export function updateHeat(state: SimState, dt: number): void {
 
   const tier = tierFor(Math.floor(heat.progress))
   if (heat.spotted) {
-    heat.progress += HEAT.spottedRise * (0.7 + tier.aggression) * dt
+    // Being seen raises heat; fleeing fast (loud, conspicuous) raises it faster.
+    const speedRise = HEAT.spottedSpeedRise * state.playerSpeed
+    heat.progress += (HEAT.spottedRise + speedRise) * (0.7 + tier.aggression) * dt
   } else if (heat.timeSinceSpotted > HEAT.lostGrace) {
     heat.progress -= HEAT.hiddenDecay * dt
   }

@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { leftNormal, sampleAt, type BakedRamp, type BakedTrack } from '@/game/world/track'
+import { inGap, leftNormal, sampleAt, type BakedRamp, type BakedTrack } from '@/game/world/track'
 import { LANE_GAP, type RaceState } from './raceState'
 
 const CAP = 260 // max deck segments rendered per lane
@@ -64,6 +64,9 @@ export function Track({ race }: { race: RaceState }) {
       const dz = b.z - a.z
       const len = Math.hypot(dx, dz)
       if (len < 0.001 || count >= CAP) continue
+      // Leave a visible hole in the deck wherever there's a gap to jump.
+      const midArc = (t.cum[idx] + (t.cum[idx + 1] ?? t.length)) / 2
+      if (inGap(t, midArc)) continue
       const yaw = Math.atan2(dx, dz)
       e.set(0, yaw, 0)
       q.setFromEuler(e)

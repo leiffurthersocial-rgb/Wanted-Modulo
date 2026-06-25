@@ -114,8 +114,8 @@ function activate(
 
 /**
  * Finds a spawn point near the player that isn't inside a building or river —
- * biased to the rear arc (behind the player's travel/facing direction) so units
- * never pop into view right in front of the player.
+ * always behind the player so units never pop into view in front of them. The
+ * forward cone (POLICE.frontClearCone half-angle) is strictly excluded.
  */
 function findSpawnPoint(state: SimState, radius: number): [number, number] {
   const p = state.player.pos
@@ -126,42 +126,27 @@ function findSpawnPoint(state: SimState, radius: number): [number, number] {
     fx = Math.sin(state.player.heading)
     fz = Math.cos(state.player.heading)
   }
-  const behind = Math.atan2(fx, fz) + Math.PI
-  for (let k = 0; k < 8; k++) {
-    const a = behind + (state.rand() - 0.5) * 1.7 // ~±49° rear arc
+  const facing = Math.atan2(fx, fz)
+  const behind = facing + Math.PI
+  // Widest rear half-arc that still leaves the forward cone clear.
+  const rearHalf = Math.PI - POLICE.frontClearCone
+  for (let k = 0; k < 10; k++) {
+    const a = behind + (state.rand() - 0.5) * 2 * rearHalf
     const x = p.x + Math.sin(a) * radius
     const z = p.z + Math.cos(a) * radius
     if (!buildingCollision(x, z, 2.5).hit && !isWater(x, z)) return [x, z]
   }
-  return [p.x - Math.sin(Math.atan2(fx, fz)) * radius, p.z - Math.cos(Math.atan2(fx, fz)) * radius]
+  return [p.x - Math.sin(facing) * radius, p.z - Math.cos(facing) * radius]
 }
 
 function deployRoadblock(state: SimState, tier: HeatTier): void {
-  // Place a line of stationary units ahead along the player's travel direction.
-  const p = state.player.pos
-  let dirX = state.playerVel.x
-  let dirZ = state.playerVel.z
-  const len = Math.hypot(dirX, dirZ)
-  if (len < 1) {
-    dirX = Math.sin(state.player.heading)
-    dirZ = Math.cos(state.player.heading)
-  } else {
-    dirX /= len
-    dirZ /= len
-  }
-  const ahead = POLICE.spawnRadius * 0.7
-  const cx = p.x + dirX * ahead
-  const cz = p.z + dirZ * ahead
-  // Perpendicular spread.
-  const px = -dirZ
-  const pz = dirX
-  for (let i = -1; i <= 1; i++) {
+  // Pursuit surge: a burst of extra units spawned behind the player (never in
+  // front) that immediately give chase — a wave that closes from the rear.
+  for (let i = 0; i < 3; i++) {
     const u = inactiveUnit(state)
     if (!u) return
-    const x = cx + px * i * 4
-    const z = cz + pz * i * 4
-    if (buildingCollision(x, z, 2.5).hit) continue
-    activate(state, u, pickClass(state, tier), x, z, true)
+    const [x, z] = findSpawnPoint(state, POLICE.spawnRadius * (0.8 + state.rand() * 0.25))
+    activate(state, u, pickClass(state, tier), x, z, false)
   }
 }
 
@@ -247,6 +232,8 @@ function damagePolice(state: SimState, u: PoliceUnit, amount: number): void {
     spawnExplosion(state, u.pos.x, sampleHeight(u.pos.x, u.pos.z) + 0.6, u.pos.z)
     state.score.cops++
     state.score.value += SCORE.copDestroyed
+    // Mayhem: wrecking a cruiser cranks the heat.
+    state.heat.progress = Math.min(10, state.heat.progress + HEAT.mayhemBump)
   }
 }
 
@@ -378,8 +365,15 @@ export function updatePolice(state: SimState, dt: number, level: number): void {
 
 export function updateHelis(state: SimState, dt: number): void {
   const p = state.player
+  // CLOAK: helicopters lose the player entirely — they hover and hold fire.
+  const cloaked = state.power.cloak > 0
   for (const h of state.helis) {
     if (!h.active) continue
+    if (cloaked) {
+      h.pos.y += (POLICE.heliHeight - h.pos.y) * (1 - Math.exp(-1.6 * dt))
+      h.strikeFuse = -1
+      continue
+    }
     // Drift toward a point above/near the player.
     const tx = p.pos.x + state.playerVel.x * 0.5
     const tz = p.pos.z + state.playerVel.z * 0.5
