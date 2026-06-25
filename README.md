@@ -42,14 +42,14 @@ bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
 
 Eight hand-built circuits — from the friendly **Sunset Oval** through Switchback
 Ridge, Grand Loop, Canyon Rush, Skyline Weave and Riptide Coast, up to the brutal
-**Gauntlet** and the near-undriveable **Impossible** — that **roll up and down**
+**Gauntlet** and the brutal-but-beatable **Vertigo** — that **roll up and down**
 over hills, plunge through dips, and string **launch ramps** over real **gaps** in
 the deck: clear the jump or fall in. **Barriers** force a slalom on top of that.
 Race is a **solo, single-lap time trial**: just the clock and your **best lap**.
 There are no invisible walls, so run wide and you'll fall clean off the edge; clip
 a barrier and you'll lose nearly all your speed. Each circuit is lined with its own
 **themed scenery** — palms on the coast, pines on the ridge, neon pylons on the
-skyline, glowing crystals on Impossible — so every track feels distinct. **Endless**
+skyline, glowing crystals on Vertigo — so every track feels distinct. **Endless**
 shares the rolling terrain and ramps, ramping up speed and curviness the further you
 survive.
 
