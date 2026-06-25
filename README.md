@@ -38,6 +38,15 @@ On foot you can wade and **swim across rivers** and climb back out on the far
 bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
 **handbrake** to drift around corners.
 
+## Race & Endless
+
+Five hand-built circuits (Sunset Oval, Switchback Ridge, Grand Loop, Canyon Rush,
+Skyline Weave) that **roll up and down** over hills and plunge through dips, each
+with **launch ramps** for big air. Pick **1–3 laps** and chase a flat-out rival
+down a parallel lane — there are no invisible walls, so run wide and you'll fall
+clean off the edge and lose time getting back. **Endless** mode shares the rolling
+terrain and ramps, and ramps up speed and curviness the further you survive.
+
 ## World
 
 The map is **infinite** and streamed around the player: a logical, district-based

@@ -2,14 +2,28 @@
  * Track geometry for Race + Endless modes.
  *
  * A track is a centreline polyline (baked from control points via Catmull-Rom,
- * or generated procedurally for the endless mode) plus a half-width. Cars drive
- * freely in the world; we project their position onto the centreline to measure
- * progress (arc length) and lateral offset (how close to falling off the edge).
+ * or generated procedurally for the endless mode) plus a half-width and an
+ * elevation profile. Cars drive freely in the world; we project their position
+ * onto the centreline to measure progress (arc length), lateral offset (how
+ * close to falling off the edge) and ground height (so tracks roll up and down).
+ *
+ * Ramps are sparse kickers placed along the centreline: hit one with speed and
+ * the car launches into the air and lands further down the track.
  */
 
 export interface Vec2 {
   x: number
   z: number
+}
+
+/** A launch ramp: rises from arc length `s0` to a lip at `s0 + len`. */
+export interface BakedRamp {
+  /** Arc length where the ramp begins. */
+  s0: number
+  /** Run length of the ramp along the centreline. */
+  len: number
+  /** Vertical rise from base to lip. */
+  height: number
 }
 
 export interface BakedTrack {
@@ -18,6 +32,8 @@ export interface BakedTrack {
   pts: Vec2[]
   /** Unit tangent at each point. */
   tan: Vec2[]
+  /** Ground elevation (world Y) at each point. */
+  y: number[]
   /** Cumulative arc length at each point. */
   cum: number[]
   /** Total centreline length (one lap, for closed tracks). */
@@ -25,6 +41,8 @@ export interface BakedTrack {
   closed: boolean
   half: number
   endless: boolean
+  /** Launch ramps along the centreline. */
+  ramps: BakedRamp[]
   /** Lazily extend an endless track so it covers world index `to`. */
   extend?: (to: number) => void
 }
@@ -34,6 +52,10 @@ export interface TrackDef {
   name: string
   blurb: string
   control: Vec2[]
+  /** Per-control-point elevation (world Y). Defaults to flat when omitted. */
+  elev?: number[]
+  /** Ramps as a fraction of the lap (0..1) + their rise. */
+  ramps?: { at: number; height: number; len?: number }[]
   laps: number
   half: number
 }
@@ -51,29 +73,47 @@ function catmull(p0: number, p1: number, p2: number, p3: number, t: number): num
   )
 }
 
-function bake(id: string, name: string, control: Vec2[], closed: boolean, half: number): BakedTrack {
+function bake(def: TrackDef, closed: boolean): BakedTrack {
+  const control = def.control
+  const elev = def.elev ?? control.map(() => 0)
   const n = control.length
   const raw: Vec2[] = []
+  const rawY: number[] = []
   const SUB = 14 // subdivisions per control segment
   const segs = closed ? n : n - 1
   for (let i = 0; i < segs; i++) {
-    const p0 = control[(i - 1 + n) % n]
-    const p1 = control[i % n]
-    const p2 = control[(i + 1) % n]
-    const p3 = control[(i + 2) % n]
+    const i0 = (i - 1 + n) % n
+    const i1 = i % n
+    const i2 = (i + 1) % n
+    const i3 = (i + 2) % n
     for (let s = 0; s < SUB; s++) {
       const t = s / SUB
-      raw.push({ x: catmull(p0.x, p1.x, p2.x, p3.x, t), z: catmull(p0.z, p1.z, p2.z, p3.z, t) })
+      raw.push({
+        x: catmull(control[i0].x, control[i1].x, control[i2].x, control[i3].x, t),
+        z: catmull(control[i0].z, control[i1].z, control[i2].z, control[i3].z, t),
+      })
+      rawY.push(catmull(elev[i0], elev[i1], elev[i2], elev[i3], t))
     }
   }
-  if (!closed) raw.push(control[n - 1])
-  return finalize(id, name, raw, closed, half, false)
+  if (!closed) {
+    raw.push(control[n - 1])
+    rawY.push(elev[n - 1])
+  }
+  const baked = finalize(def.id, def.name, raw, rawY, closed, def.half, false)
+  // Bake ramps from lap-fraction positions once the length is known.
+  if (def.ramps) {
+    for (const r of def.ramps) {
+      baked.ramps.push({ s0: r.at * baked.length, len: r.len ?? 12, height: r.height })
+    }
+  }
+  return baked
 }
 
 function finalize(
   id: string,
   name: string,
   pts: Vec2[],
+  y: number[],
   closed: boolean,
   half: number,
   endless: boolean,
@@ -94,15 +134,15 @@ function finalize(
   const length = closed
     ? cum[cum.length - 1] + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z)
     : cum[cum.length - 1]
-  return { id, name, pts, tan, cum, length, closed, half, endless }
+  return { id, name, pts, tan, y, cum, length, closed, half, endless, ramps: [] }
 }
 
 /* -------------------------------------------------------------------------- */
 /*  Sampling + projection                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** Centreline point + tangent at arc length `s` (wraps for closed tracks). */
-export function sampleAt(t: BakedTrack, s: number): { pos: Vec2; tan: Vec2 } {
+/** Centreline point, tangent + ground elevation at arc length `s`. */
+export function sampleAt(t: BakedTrack, s: number): { pos: Vec2; tan: Vec2; y: number } {
   let d = s
   if (t.closed) d = ((d % t.length) + t.length) % t.length
   d = Math.max(0, Math.min(t.length - 0.001, d))
@@ -113,10 +153,40 @@ export function sampleAt(t: BakedTrack, s: number): { pos: Vec2; tan: Vec2 } {
   const b = t.pts[(i + 1) % t.pts.length]
   const segLen = (t.cum[i + 1] ?? t.length) - t.cum[i] || 1
   const f = Math.max(0, Math.min(1, (d - t.cum[i]) / segLen))
+  const ya = t.y[i] ?? 0
+  const yb = t.y[(i + 1) % t.y.length] ?? ya
   return {
     pos: { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f },
     tan: t.tan[i],
+    y: ya + (yb - ya) * f,
   }
+}
+
+/** Ground elevation (world Y) of the centreline at arc length `s`. */
+export function elevAt(t: BakedTrack, s: number): number {
+  return sampleAt(t, s).y
+}
+
+/**
+ * The launch ramp covering arc length `s`, plus how far up its run we are
+ * (0 at the base, 1 at the lip). Returns null when not on a ramp.
+ */
+export function rampAt(t: BakedTrack, s: number): { ramp: BakedRamp; frac: number } | null {
+  let d = s
+  if (t.closed) d = ((d % t.length) + t.length) % t.length
+  for (const ramp of t.ramps) {
+    if (d >= ramp.s0 && d <= ramp.s0 + ramp.len) {
+      return { ramp, frac: (d - ramp.s0) / ramp.len }
+    }
+  }
+  return null
+}
+
+/** Ground height including any ramp rise at arc length `s`. */
+export function groundAt(t: BakedTrack, s: number): number {
+  const base = elevAt(t, s)
+  const r = rampAt(t, s)
+  return base + (r ? r.ramp.height * r.frac : 0)
 }
 
 /** Left-hand normal (rotate tangent +90°). */
@@ -178,36 +248,83 @@ export const TRACK_DEFS: TrackDef[] = [
   {
     id: 'sunset-oval',
     name: 'Sunset Oval',
-    blurb: 'Fast, flowing — a friendly first circuit.',
+    blurb: 'Fast, flowing sweepers with one big crest jump.',
     laps: 2,
-    half: 6,
+    half: 7,
     control: [
-      { x: 0, z: 70 }, { x: 55, z: 60 }, { x: 80, z: 0 }, { x: 55, z: -60 },
-      { x: 0, z: -75 }, { x: -55, z: -60 }, { x: -80, z: 0 }, { x: -55, z: 60 },
+      { x: 0, z: 120 }, { x: 95, z: 105 }, { x: 140, z: 0 }, { x: 95, z: -105 },
+      { x: 0, z: -130 }, { x: -95, z: -105 }, { x: -140, z: 0 }, { x: -95, z: 105 },
     ],
+    elev: [0, 4, 7, 4, 0, 4, 7, 4],
+    ramps: [{ at: 0.5, height: 3.2, len: 13 }],
   },
   {
     id: 'switchback',
-    name: 'Switchback',
-    blurb: 'Tight esses reward clean lines.',
+    name: 'Switchback Ridge',
+    blurb: 'Tight esses over a climbing mountain ridge.',
     laps: 2,
-    half: 5.5,
+    half: 6,
     control: [
-      { x: 0, z: 90 }, { x: 50, z: 80 }, { x: 30, z: 40 }, { x: 70, z: 20 },
-      { x: 60, z: -30 }, { x: 10, z: -40 }, { x: 30, z: -90 }, { x: -30, z: -85 },
-      { x: -55, z: -35 }, { x: -25, z: -10 }, { x: -60, z: 30 }, { x: -45, z: 80 },
+      { x: 0, z: 150 }, { x: 85, z: 135 }, { x: 50, z: 70 }, { x: 120, z: 35 },
+      { x: 100, z: -50 }, { x: 18, z: -68 }, { x: 50, z: -150 }, { x: -50, z: -145 },
+      { x: -92, z: -60 }, { x: -42, z: -18 }, { x: -100, z: 50 }, { x: -75, z: 135 },
+    ],
+    elev: [0, 2, 6, 9, 6, 3, 0, 2, 7, 10, 6, 2],
+    ramps: [
+      { at: 0.28, height: 2.8, len: 11 },
+      { at: 0.72, height: 3.0, len: 11 },
     ],
   },
   {
     id: 'grand-loop',
     name: 'Grand Loop',
-    blurb: 'A long, sweeping high-speed track.',
+    blurb: 'A long, sweeping high-speed track with rolling hills.',
+    laps: 3,
+    half: 7.5,
+    control: [
+      { x: 0, z: 200 }, { x: 135, z: 170 }, { x: 200, z: 50 }, { x: 160, z: -95 },
+      { x: 70, z: -145 }, { x: 100, z: -220 }, { x: -50, z: -200 }, { x: -150, z: -120 },
+      { x: -120, z: 0 }, { x: -200, z: 85 }, { x: -120, z: 185 },
+    ],
+    elev: [0, 6, 10, 6, 2, 0, 4, 10, 14, 8, 3],
+    ramps: [
+      { at: 0.18, height: 3.5, len: 14 },
+      { at: 0.6, height: 4.0, len: 15 },
+    ],
+  },
+  {
+    id: 'canyon-rush',
+    name: 'Canyon Rush',
+    blurb: 'Plunging dips and steep climbs through a canyon — mind the jumps.',
+    laps: 2,
+    half: 6.5,
+    control: [
+      { x: 0, z: 160 }, { x: 110, z: 150 }, { x: 175, z: 70 }, { x: 150, z: -40 },
+      { x: 200, z: -130 }, { x: 90, z: -190 }, { x: -40, z: -160 }, { x: -30, z: -60 },
+      { x: -130, z: -30 }, { x: -180, z: 80 }, { x: -90, z: 165 },
+    ],
+    elev: [2, 8, 14, 4, 0, 10, 16, 6, 0, 9, 4],
+    ramps: [
+      { at: 0.34, height: 4.5, len: 14 },
+      { at: 0.78, height: 3.8, len: 13 },
+    ],
+  },
+  {
+    id: 'skyline-figure8',
+    name: 'Skyline Weave',
+    blurb: 'A weaving skyline circuit that climbs to a soaring ramp finish.',
     laps: 3,
     half: 6.5,
     control: [
-      { x: 0, z: 120 }, { x: 80, z: 100 }, { x: 120, z: 30 }, { x: 95, z: -55 },
-      { x: 40, z: -85 }, { x: 60, z: -130 }, { x: -30, z: -120 }, { x: -90, z: -70 },
-      { x: -70, z: 0 }, { x: -120, z: 50 }, { x: -70, z: 110 },
+      { x: 0, z: 170 }, { x: 90, z: 150 }, { x: 60, z: 60 }, { x: 150, z: 20 },
+      { x: 170, z: -80 }, { x: 60, z: -120 }, { x: 80, z: -200 }, { x: -70, z: -185 },
+      { x: -90, z: -90 }, { x: -30, z: -40 }, { x: -150, z: 0 }, { x: -160, z: 110 },
+    ],
+    elev: [0, 5, 11, 7, 3, 9, 14, 8, 2, 6, 12, 5],
+    ramps: [
+      { at: 0.22, height: 3.6, len: 13 },
+      { at: 0.55, height: 4.2, len: 15 },
+      { at: 0.85, height: 3.4, len: 12 },
     ],
   },
 ]
@@ -218,7 +335,7 @@ export function getTrack(id: string): BakedTrack {
   const cached = BAKED.get(id)
   if (cached) return cached
   const def = TRACK_DEFS.find((d) => d.id === id) ?? TRACK_DEFS[0]
-  const baked = bake(def.id, def.name, def.control, true, def.half)
+  const baked = bake(def, true)
   BAKED.set(id, baked)
   return baked
 }
@@ -233,39 +350,53 @@ export function trackLaps(id: string): number {
 
 /** Deterministic value-noise-ish curvature so the endless ribbon is repeatable. */
 function curveAt(i: number): number {
-  const a = Math.sin(i * 0.13) * 0.6
-  const b = Math.sin(i * 0.031 + 2.1) * 0.9
-  const c = Math.sin(i * 0.007 + 5.3) * 1.2
-  return (a + b + c) / 2.7 // ~[-1,1]
+  const a = Math.sin(i * 0.15) * 0.7
+  const b = Math.sin(i * 0.037 + 2.1) * 1.0
+  const c = Math.sin(i * 0.009 + 5.3) * 1.3
+  return (a + b + c) / 3.0 // ~[-1,1]
+}
+
+/** Deterministic, repeatable hill profile for the endless ribbon. */
+function heightAt(i: number): number {
+  const a = Math.sin(i * 0.05) * 4
+  const b = Math.sin(i * 0.017 + 1.3) * 6
+  const c = Math.sin(i * 0.0065 + 4.0) * 5
+  return a + b + c
 }
 
 const ENDLESS_STEP = 6 // world units per generated point
 const ENDLESS_HALF = 5.5
+/** Endless ramps: one roughly every this-many points, scaling with distance. */
+const ENDLESS_RAMP_SPACING = 90
 
 /** Builds the (lazily extending) endless track starting straight ahead. */
 export function makeEndless(): BakedTrack {
   const pts: Vec2[] = []
   const tan: Vec2[] = []
+  const y: number[] = []
   const cum: number[] = []
   let heading = 0
   let x = 0
   let z = 0
   let total = 0
+  let nextRamp = ENDLESS_RAMP_SPACING
   const track: BakedTrack = {
     id: 'endless',
     name: 'Endless',
     pts,
     tan,
+    y,
     cum,
     length: 0,
     closed: false,
     half: ENDLESS_HALF,
     endless: true,
+    ramps: [],
     extend: (to: number) => {
       while (pts.length <= to + 60) {
         const i = pts.length
         // Straight launch ramp, then increasingly curvy with distance.
-        const intensity = Math.min(0.16, 0.02 + i * 0.00002)
+        const intensity = Math.min(0.22, 0.02 + i * 0.00003)
         if (i > 6) heading += curveAt(i) * intensity
         const nx = x + Math.sin(heading) * ENDLESS_STEP
         const nz = z + Math.cos(heading) * ENDLESS_STEP
@@ -274,14 +405,22 @@ export function makeEndless(): BakedTrack {
         z = nz
         pts.push({ x, z })
         tan.push({ x: Math.sin(heading), z: Math.cos(heading) })
+        // Hills kick in after the start straight, growing a touch with distance.
+        y.push(i > 10 ? heightAt(i) * Math.min(1, 0.4 + i * 0.0004) : 0)
         cum.push(total === 0 ? 0 : total)
         track.length = total
+        // Sprinkle launch ramps once past the start straight.
+        if (i > 30 && i >= nextRamp) {
+          track.ramps.push({ s0: total, len: 12, height: 3 + Math.min(3, i * 0.0008) })
+          nextRamp = i + ENDLESS_RAMP_SPACING
+        }
       }
     },
   }
   // Seed the first point + an initial run.
   pts.push({ x: 0, z: 0 })
   tan.push({ x: 0, z: 1 })
+  y.push(0)
   cum.push(0)
   track.extend!(200)
   return track

@@ -42,12 +42,18 @@ export function Statistics() {
           <div className="v">{p.bestCaught}</div>
           <div className="k">Endless Best</div>
           <div className="v">{Math.round(p.endlessBest)}m</div>
-          {TRACK_DEFS.map((t) => (
-            <div key={t.id} style={{ display: 'contents' }}>
-              <div className="k">{t.name} — Best Lap-Set</div>
-              <div className="v">{fmtMs(p.raceBest[t.id] ?? 0)}</div>
-            </div>
-          ))}
+          {TRACK_DEFS.flatMap((t) =>
+            [1, 2, 3]
+              .filter((n) => p.raceBest[`${t.id}#${n}`] !== undefined)
+              .map((n) => (
+                <div key={`${t.id}#${n}`} style={{ display: 'contents' }}>
+                  <div className="k">
+                    {t.name} — {n} {n === 1 ? 'lap' : 'laps'}
+                  </div>
+                  <div className="v">{fmtMs(p.raceBest[`${t.id}#${n}`] ?? 0)}</div>
+                </div>
+              )),
+          )}
         </div>
       </div>
 

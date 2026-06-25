@@ -17,11 +17,11 @@ export function RaceScene() {
   const { camera } = useThree()
   const mode = useGameStore((s) => s.mode)
   const trackId = useGameStore((s) => s.raceTrackId)
-  const difficulty = useGameStore((s) => s.raceDifficulty)
-  const best = useGameStore((s) => s.raceBestFor(trackId, mode === 'endless'))
+  const laps = useGameStore((s) => s.raceLaps)
+  const best = useGameStore((s) => s.raceBestFor(trackId, mode === 'endless', laps))
 
   const race = useMemo(
-    () => createRaceState(mode, trackId, difficulty, best),
+    () => createRaceState(mode, trackId, laps, best),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )

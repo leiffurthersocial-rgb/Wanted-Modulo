@@ -14,9 +14,6 @@ export type GamePhase =
 /** Which game mode a run uses. */
 export type GameMode = 'survive' | 'pursuit' | 'race' | 'endless'
 
-/** Bot opponent difficulty for Race mode. */
-export type BotDifficulty = 'easy' | 'medium' | 'hard'
-
 /** Logical input actions, decoupled from physical keys (see InputManager). */
 export type InputAction =
   | 'forward'
