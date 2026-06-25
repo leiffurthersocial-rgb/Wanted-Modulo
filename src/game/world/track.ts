@@ -55,6 +55,8 @@ export interface BakedTrack {
   closed: boolean
   half: number
   endless: boolean
+  /** Scenery theme id used by the race Scenery decorator. */
+  theme: string
   /** Launch ramps along the centreline. */
   ramps: BakedRamp[]
   /** Holes in the deck (typically just past a ramp lip). */
@@ -77,6 +79,8 @@ export interface TrackDef {
   ramps?: { at: number; height: number; len?: number; gap?: number }[]
   /** Barriers: lap fraction `at` + signed lateral offset (−1..1 of half-width). */
   obstacles?: { at: number; lateral: number; r?: number }[]
+  /** Scenery theme that lines the circuit (palms, pines, neon, …). */
+  theme?: string
   half: number
 }
 
@@ -120,6 +124,7 @@ function bake(def: TrackDef, closed: boolean): BakedTrack {
     rawY.push(elev[n - 1])
   }
   const baked = finalize(def.id, def.name, raw, rawY, closed, def.half, false)
+  baked.theme = def.theme ?? 'none'
   // Bake ramps from lap-fraction positions once the length is known.
   if (def.ramps) {
     for (const r of def.ramps) {
@@ -175,7 +180,7 @@ function finalize(
   const length = closed
     ? cum[cum.length - 1] + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z)
     : cum[cum.length - 1]
-  return { id, name, pts, tan, y, cum, length, closed, half, endless, ramps: [], gaps: [], obstacles: [] }
+  return { id, name, pts, tan, y, cum, length, closed, half, endless, theme: 'none', ramps: [], gaps: [], obstacles: [] }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -297,6 +302,7 @@ export function project(
 export const TRACK_DEFS: TrackDef[] = [
   {
     id: 'sunset-oval',
+    theme: 'palm',
     name: 'Sunset Oval',
     blurb: 'Fast, flowing sweepers with one crest jump over a gap. A friendly start.',
     half: 6.5,
@@ -314,6 +320,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'switchback',
+    theme: 'pine',
     name: 'Switchback Ridge',
     blurb: 'Tight esses over a climbing ridge — apex barriers and two gap jumps.',
     half: 5.4,
@@ -337,6 +344,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'grand-loop',
+    theme: 'flag',
     name: 'Grand Loop',
     blurb: 'Long, sweeping high-speed track — rolling hills, chicanes and big gap jumps.',
     half: 6.8,
@@ -360,6 +368,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'canyon-rush',
+    theme: 'canyon',
     name: 'Canyon Rush',
     blurb: 'Plunging dips and steep climbs — long ramp gaps over the ravine.',
     half: 5.8,
@@ -382,6 +391,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'skyline-figure8',
+    theme: 'neon',
     name: 'Skyline Weave',
     blurb: 'A weaving skyline circuit that climbs to a soaring ramp-and-gap finish.',
     half: 5.8,
@@ -405,6 +415,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'riptide-coast',
+    theme: 'palm',
     name: 'Riptide Coast',
     blurb: 'Sweeping coastal esses with staggered chicanes and a double gap jump.',
     half: 6.2,
@@ -431,6 +442,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'the-gauntlet',
+    theme: 'hazard',
     name: 'The Gauntlet',
     blurb: 'Brutal: narrow, steep, blind crests, a barrier slalom and three gap jumps.',
     half: 4.4,
@@ -462,6 +474,7 @@ export const TRACK_DEFS: TrackDef[] = [
   },
   {
     id: 'impossible',
+    theme: 'crystal',
     name: 'Impossible',
     blurb: 'A razor-thin ribbon of hairpins, towering ramps and yawning gaps. Almost no one finishes.',
     half: 3.5,
@@ -555,6 +568,7 @@ export function makeEndless(): BakedTrack {
     closed: false,
     half: ENDLESS_HALF,
     endless: true,
+    theme: 'none',
     ramps: [],
     gaps: [],
     obstacles: [],

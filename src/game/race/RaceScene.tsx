@@ -10,6 +10,7 @@ import { sampleAt, leftNormal } from '@/game/world/track'
 import { RACE_DEF, createRaceState } from './raceState'
 import { stepRace } from './raceState'
 import { Track } from './Track'
+import { Scenery } from './Scenery'
 
 const CAM = { distance: 14, height: 8, lerp: 6, lookLerp: 9 }
 
@@ -107,6 +108,7 @@ export function RaceScene() {
     <>
       <Environment />
       <Track race={race} />
+      <Scenery race={race} />
       {/* Void floor far below so falling off reads. */}
       <mesh position={[0, -26, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[4000, 4000]} />

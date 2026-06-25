@@ -47,8 +47,11 @@ over hills, plunge through dips, and string **launch ramps** over real **gaps** 
 the deck: clear the jump or fall in. **Barriers** force a slalom on top of that.
 Race is a **solo, single-lap time trial**: just the clock and your **best lap**.
 There are no invisible walls, so run wide and you'll fall clean off the edge; clip
-a barrier and you'll lose nearly all your speed. **Endless** shares the rolling
-terrain and ramps, ramping up speed and curviness the further you survive.
+a barrier and you'll lose nearly all your speed. Each circuit is lined with its own
+**themed scenery** — palms on the coast, pines on the ridge, neon pylons on the
+skyline, glowing crystals on Impossible — so every track feels distinct. **Endless**
+shares the rolling terrain and ramps, ramping up speed and curviness the further you
+survive.
 
 In **Survive**, the police never spawn in front of you — they close in from behind
 and to the sides — and they arrive **fast**, escalating through a reworked heat
