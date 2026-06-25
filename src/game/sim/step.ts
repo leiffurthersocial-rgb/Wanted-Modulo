@@ -12,6 +12,7 @@ import { recycleVehicles, updateVehicleVertical } from './systems/vehicles'
 import { updatePowerups } from './systems/powerups'
 import { updateParticles } from './systems/particles'
 import { updateChase } from './systems/chase'
+import { updateMines } from './systems/mines'
 import { heatLevel, updateHeat } from './systems/heat'
 import {
   manageFleet,
@@ -73,6 +74,8 @@ export function stepSim(state: SimState, input: StepInput, dt: number): void {
   manageFleet(state, dt, level)
   updatePolice(state, dt, level)
   updateHelis(state, dt)
+  // Police ground bombs are a survive-mode-only hazard.
+  if (state.mode === 'survive') updateMines(state, dt, level)
   updateCapture(state, dt)
 
   // 4. Destruction + particle integration.

@@ -11,21 +11,16 @@ interface ProgressionStore {
   /** Cop-chase mode: most suspects caught in a run, and best chase score. */
   bestCaught: number
   bestChaseScore: number
-  /** Race mode: best lap-total time (ms), keyed by `trackId#laps`. */
+  /** Race mode: best single-lap time (ms) per track id. */
   raceBest: Record<string, number>
   /** Endless mode: furthest distance (m). */
   endlessBest: number
 
   recordRun: (stats: RunStats) => void
   recordChase: (caught: number, score: number) => void
-  recordRace: (trackId: string, laps: number, timeMs: number) => void
+  recordRace: (trackId: string, timeMs: number) => void
   recordEndless: (distance: number) => void
   reset: () => void
-}
-
-/** Personal-best key for a race result (best times differ per lap count). */
-export function raceKey(trackId: string, laps: number): string {
-  return `${trackId}#${laps}`
 }
 
 /**
@@ -61,12 +56,11 @@ export const useProgressionStore = create<ProgressionStore>()(
           bestChaseScore: Math.max(s.bestChaseScore, score),
         })),
 
-      recordRace: (trackId, laps, timeMs) =>
+      recordRace: (trackId, timeMs) =>
         set((s) => {
-          const key = raceKey(trackId, laps)
-          const prev = s.raceBest[key]
+          const prev = s.raceBest[trackId]
           if (prev !== undefined && prev <= timeMs) return s
-          return { raceBest: { ...s.raceBest, [key]: timeMs } }
+          return { raceBest: { ...s.raceBest, [trackId]: timeMs } }
         }),
 
       recordEndless: (distance) =>

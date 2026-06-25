@@ -19,11 +19,6 @@ function RaceHud({ race }: { race: RaceStats }) {
   return (
     <>
       {race.recover > 0 && <div className="status-banner spotted">↩ BACK ON TRACK</div>}
-      {!race.endless && (
-        <div className={`race-pos ${race.position === 1 ? 'lead' : ''}`}>
-          {race.position === 1 ? '1st 🏁' : '2nd'}
-        </div>
-      )}
     </>
   )
 }
@@ -46,12 +41,12 @@ function RaceTop({ race }: { race: RaceStats }) {
       ) : (
         <>
           <div className="hud-stat">
-            <div className="label">Lap</div>
-            <div className="value">{race.lap}/{race.totalLaps}</div>
-          </div>
-          <div className="hud-stat">
             <div className="label">Time</div>
             <div className="value">{fmtRaceTime(race.time)}</div>
+          </div>
+          <div className="hud-stat">
+            <div className="label">Best Lap</div>
+            <div className="value">{race.best > 0 ? fmtRaceTime(race.best / 1000) : '—'}</div>
           </div>
         </>
       )}
@@ -178,7 +173,7 @@ export function HUD() {
         <div className="hud-hint">
           {stats.race.endless
             ? 'A / D or ←/→ to steer · you can’t stop — don’t fall off! · ESC pause'
-            : 'WASD drive · Space drift · beat the bot · ESC pause'}
+            : 'WASD drive · Space drift · dodge the barriers · beat your best lap · ESC pause'}
         </div>
       </div>
     )

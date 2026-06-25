@@ -10,7 +10,7 @@ import { resetDebugActionPings } from '@/game/sim/systems/powerups'
 import { COP_DEF, createChase } from '@/game/sim/systems/chase'
 import type { PropType } from '@/game/world/propCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
-import { PARTICLES, PLAYER, POLICE } from '@/config/constants'
+import { MINES, PARTICLES, PLAYER, POLICE } from '@/config/constants'
 import { mulberry32 } from '@/game/world/cityModel'
 
 export type DamageTier = 'healthy' | 'dented' | 'smoking' | 'onfire' | 'wreck'
@@ -80,6 +80,18 @@ export interface HeliUnit {
   strikeFuse: number
   strikeX: number
   strikeZ: number
+}
+
+/** A police ground bomb (survive mode): drops, arms, then explodes on contact. */
+export interface Mine {
+  active: boolean
+  pos: THREE.Vector3
+  /** Arming countdown (s); harmless until it reaches 0. */
+  arm: number
+  /** Remaining lifetime (s) before it auto-detonates. */
+  life: number
+  /** Blink phase for the warning light. */
+  blink: number
 }
 
 export interface Particle {
@@ -162,6 +174,10 @@ export interface SimState {
   vehicles: VehicleEntity[]
   police: PoliceUnit[]
   helis: HeliUnit[]
+  /** Police ground bombs (survive mode only). */
+  mines: Mine[]
+  /** Throttle timer for police bomb drops. */
+  mineTimer: number
   props: SimProp[]
   hideQueue: HideRequest[]
   particles: Particle[]
@@ -237,6 +253,14 @@ function makeHeliPool(): HeliUnit[] {
   return out
 }
 
+function makeMinePool(): Mine[] {
+  const out: Mine[] = []
+  for (let i = 0; i < MINES.max; i++) {
+    out.push({ active: false, pos: new THREE.Vector3(), arm: 0, life: 0, blink: 0 })
+  }
+  return out
+}
+
 function makeParticlePool(): Particle[] {
   const out: Particle[] = []
   for (let i = 0; i < PARTICLES.max; i++) {
@@ -307,6 +331,8 @@ export function createSimState(mode: GameMode = 'survive'): SimState {
     vehicles,
     police: makePolicePool(),
     helis: makeHeliPool(),
+    mines: makeMinePool(),
+    mineTimer: MINES.dropInterval,
     props: getProps().props.map((p) => ({ ...p, alive: true })),
     hideQueue: [],
     particles: makeParticlePool(),

@@ -40,12 +40,18 @@ bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
 
 ## Race & Endless
 
-Five hand-built circuits (Sunset Oval, Switchback Ridge, Grand Loop, Canyon Rush,
-Skyline Weave) that **roll up and down** over hills and plunge through dips, each
-with **launch ramps** for big air. Pick **1–3 laps** and chase a flat-out rival
-down a parallel lane — there are no invisible walls, so run wide and you'll fall
-clean off the edge and lose time getting back. **Endless** mode shares the rolling
-terrain and ramps, and ramps up speed and curviness the further you survive.
+Six hand-built circuits — Sunset Oval, Switchback Ridge, Grand Loop, Canyon Rush,
+Skyline Weave, and the brutal **Gauntlet** — that **roll up and down** over hills
+and plunge through dips, each with **launch ramps** for big air and **barriers** to
+slalom. Race is a **solo, single-lap time trial**: there's no rival, just the clock
+and your **best lap**. There are no invisible walls, so run wide and you'll fall
+clean off the edge; clip a barrier and you'll lose nearly all your speed.
+**Endless** mode shares the rolling terrain and ramps, and ramps up speed and
+curviness the further you survive.
+
+In **Survive**, a sufficiently angry police force starts dropping **ground bombs**
+behind you — they arm, blink, and detonate on contact (or after a fuse), damaging
+your car. Keep moving and don't backtrack over one.
 
 ## World
 

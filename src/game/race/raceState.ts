@@ -6,7 +6,6 @@ import {
   type BakedTrack,
   getTrack,
   groundAt,
-  leftNormal,
   makeEndless,
   project,
   rampAt,
@@ -27,8 +26,7 @@ export const RACE_DEF: VehicleDef = {
   size: { length: 4.0, width: 1.9, height: 1.15 },
 }
 
-const BOT_COLOR = '#33b5ff'
-/** Lateral gap between the player's track and the bot's parallel track. */
+/** Kept for the (now unused) parallel-lane offset referenced by the renderer. */
 export const LANE_GAP = 20
 const GRAVITY = 26
 const FALL_DEATH_Y = -22
@@ -36,9 +34,6 @@ const COUNTDOWN = 3
 const CAR_HALF = 1.0
 /** Minimum speed needed to actually launch off a ramp lip. */
 const LAUNCH_MIN = 8
-
-/** The bot drives flat-out (single, strong skill level — no difficulty tiers). */
-const BOT_BASE_SPEED = 31
 
 export interface RaceCar {
   pos: THREE.Vector3
@@ -87,28 +82,15 @@ function makeCar(pos: { x: number; z: number }, heading: number, y: number): Rac
   }
 }
 
-export function createRaceState(
-  mode: GameMode,
-  trackId: string,
-  laps: number,
-  best: number,
-): RaceState {
+export function createRaceState(mode: GameMode, trackId: string, best: number): RaceState {
   const endless = mode === 'endless'
   const track = endless ? makeEndless() : getTrack(trackId)
   const start = sampleAt(track, 0)
   const heading = Math.atan2(start.tan.x, start.tan.z)
   const player = makeCar(start.pos, heading, start.y)
 
-  let bot: RaceCar | null = null
-  if (!endless) {
-    const n = leftNormal(start.tan)
-    bot = makeCar(
-      { x: start.pos.x + n.x * LANE_GAP, z: start.pos.z + n.z * LANE_GAP },
-      heading,
-      start.y,
-    )
-  }
-  const totalLaps = endless ? 0 : Math.max(1, Math.min(3, Math.round(laps)))
+  // Race is now a solo time trial — a single flying lap, no rival.
+  const totalLaps = endless ? 0 : 1
 
   return {
     mode,
@@ -117,7 +99,7 @@ export function createRaceState(
     totalLaps,
     totalDist: track.length * totalLaps,
     player,
-    bot,
+    bot: null,
     countdown: COUNTDOWN,
     elapsed: 0,
     recover: 0,
@@ -254,43 +236,30 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
           player.y = ground
         }
       }
+
+      // Barrier collisions: clipping one scrubs nearly all speed and knocks the
+      // car aside — costly, but recoverable (the lap is still winnable).
+      if (!player.falling) {
+        for (const o of track.obstacles) {
+          const dx = player.pos.x - o.x
+          const dz = player.pos.z - o.z
+          const rr = o.r + CAR_HALF
+          const d2 = dx * dx + dz * dz
+          if (d2 < rr * rr) {
+            const d = Math.sqrt(d2) || 0.0001
+            player.pos.x = o.x + (dx / d) * rr
+            player.pos.z = o.z + (dz / d) * rr
+            player.state.speed *= 0.22
+            player.state.slip *= 0.3
+          }
+        }
+      }
     }
   }
 
-  // --- Bot (race only) ---
-  if (state.bot && !state.endless) {
-    const bot = state.bot
-    const here = sampleAt(track, bot.traveled)
-    const ahead = sampleAt(track, bot.traveled + 9)
-    // Corner curvature -> slow down a little.
-    const cur = Math.abs(Math.atan2(ahead.tan.x, ahead.tan.z) - Math.atan2(here.tan.x, here.tan.z))
-    const wrapped = Math.min(cur, Math.PI * 2 - cur)
-    const slow = Math.min(0.45, wrapped * 1.6)
-    // Gentle rubber-band so the race stays close: the bot pushes harder when the
-    // player is ahead and eases when it has built a lead.
-    const gap = player.traveled - bot.traveled
-    const band = Math.max(-0.12, Math.min(0.18, gap * 0.01))
-    const v = BOT_BASE_SPEED * (1 - slow) * (1 + band)
-    bot.traveled += v * dt
-    bot.state.speed = v
-    const sp = sampleAt(track, bot.traveled)
-    const n = leftNormal(sp.tan)
-    bot.pos.set(sp.pos.x + n.x * LANE_GAP, 0, sp.pos.z + n.z * LANE_GAP)
-    bot.y = groundAt(track, bot.traveled)
-    bot.state.heading = Math.atan2(sp.tan.x, sp.tan.z)
-  }
-
-  // --- Finish (race) ---
-  if (!state.endless && !state.finished) {
-    const botTraveled = state.bot ? state.bot.traveled : 0
-    if (player.traveled >= state.totalDist) {
-      state.finished = true
-      state.won = true
-    } else if (botTraveled >= state.totalDist) {
-      state.finished = true
-      state.won = false
-    }
+  // --- Finish (solo time trial) ---
+  if (!state.endless && !state.finished && player.traveled >= state.totalDist) {
+    state.finished = true
+    state.won = true
   }
 }
-
-export { BOT_COLOR }

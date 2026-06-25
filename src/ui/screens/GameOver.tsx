@@ -21,10 +21,12 @@ function RaceOver() {
   const endless = r.endless
   const bestDist = useProgressionStore((s) => s.endlessBest)
 
-  const title = endless ? 'WIPEOUT' : r.won ? 'YOU WIN' : 'DEFEATED'
+  const title = endless ? 'WIPEOUT' : 'LAP COMPLETE'
   const newBest = endless
     ? r.distance > 0 && Math.round(r.distance) >= bestDist
     : r.won && (r.best === 0 || r.time * 1000 <= r.best)
+  // Best lap before this run (ms); 0 if none yet.
+  const priorBest = r.best
 
   return (
     <div className="screen">
@@ -38,7 +40,7 @@ function RaceOver() {
           <div className="l">
             {endless
               ? newBest ? '★ New Best Distance ★' : 'Distance'
-              : r.won ? (newBest ? '★ New Best Time ★' : 'Finish Time') : 'Bot finished first'}
+              : newBest ? '★ New Best Lap ★' : 'Lap Time'}
           </div>
         </div>
 
@@ -52,10 +54,14 @@ function RaceOver() {
             </>
           ) : (
             <>
-              <div className="k">Result</div>
-              <div className="v">{r.won ? '1st 🏁' : '2nd'}</div>
-              <div className="k">Laps</div>
-              <div className="v">{r.totalLaps}</div>
+              <div className="k">Best Lap</div>
+              <div className="v">
+                {priorBest > 0 || newBest
+                  ? fmtRaceTime((newBest ? r.time * 1000 : priorBest) / 1000)
+                  : '—'}
+              </div>
+              <div className="k">Top Speed</div>
+              <div className="v">{Math.round(r.speed * 7)}</div>
             </>
           )}
         </div>

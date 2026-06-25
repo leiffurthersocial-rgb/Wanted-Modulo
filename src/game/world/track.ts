@@ -26,6 +26,14 @@ export interface BakedRamp {
   height: number
 }
 
+/** A static obstacle (barrier) sitting on the deck — clip it and you crash. */
+export interface BakedObstacle {
+  x: number
+  z: number
+  y: number
+  r: number
+}
+
 export interface BakedTrack {
   id: string
   name: string
@@ -43,6 +51,8 @@ export interface BakedTrack {
   endless: boolean
   /** Launch ramps along the centreline. */
   ramps: BakedRamp[]
+  /** Static barriers on the deck to dodge. */
+  obstacles: BakedObstacle[]
   /** Lazily extend an endless track so it covers world index `to`. */
   extend?: (to: number) => void
 }
@@ -56,7 +66,8 @@ export interface TrackDef {
   elev?: number[]
   /** Ramps as a fraction of the lap (0..1) + their rise. */
   ramps?: { at: number; height: number; len?: number }[]
-  laps: number
+  /** Barriers: lap fraction `at` + signed lateral offset (−1..1 of half-width). */
+  obstacles?: { at: number; lateral: number; r?: number }[]
   half: number
 }
 
@@ -106,6 +117,20 @@ function bake(def: TrackDef, closed: boolean): BakedTrack {
       baked.ramps.push({ s0: r.at * baked.length, len: r.len ?? 12, height: r.height })
     }
   }
+  // Bake obstacles: position along the lap + a lateral offset across the deck.
+  if (def.obstacles) {
+    for (const o of def.obstacles) {
+      const sp = sampleAt(baked, o.at * baked.length)
+      const n = leftNormal(sp.tan)
+      const off = o.lateral * (baked.half - 1)
+      baked.obstacles.push({
+        x: sp.pos.x + n.x * off,
+        z: sp.pos.z + n.z * off,
+        y: sp.y,
+        r: o.r ?? 1.4,
+      })
+    }
+  }
   return baked
 }
 
@@ -134,7 +159,7 @@ function finalize(
   const length = closed
     ? cum[cum.length - 1] + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z)
     : cum[cum.length - 1]
-  return { id, name, pts, tan, y, cum, length, closed, half, endless, ramps: [] }
+  return { id, name, pts, tan, y, cum, length, closed, half, endless, ramps: [], obstacles: [] }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -248,8 +273,7 @@ export const TRACK_DEFS: TrackDef[] = [
   {
     id: 'sunset-oval',
     name: 'Sunset Oval',
-    blurb: 'Fast, flowing sweepers with one big crest jump.',
-    laps: 2,
+    blurb: 'Fast, flowing sweepers with one big crest jump. A friendly first lap.',
     half: 7,
     control: [
       { x: 0, z: 120 }, { x: 95, z: 105 }, { x: 140, z: 0 }, { x: 95, z: -105 },
@@ -257,12 +281,15 @@ export const TRACK_DEFS: TrackDef[] = [
     ],
     elev: [0, 4, 7, 4, 0, 4, 7, 4],
     ramps: [{ at: 0.5, height: 3.2, len: 13 }],
+    obstacles: [
+      { at: 0.2, lateral: -0.55 },
+      { at: 0.75, lateral: 0.55 },
+    ],
   },
   {
     id: 'switchback',
     name: 'Switchback Ridge',
-    blurb: 'Tight esses over a climbing mountain ridge.',
-    laps: 2,
+    blurb: 'Tight esses over a climbing mountain ridge — barriers on the apexes.',
     half: 6,
     control: [
       { x: 0, z: 150 }, { x: 85, z: 135 }, { x: 50, z: 70 }, { x: 120, z: 35 },
@@ -274,12 +301,17 @@ export const TRACK_DEFS: TrackDef[] = [
       { at: 0.28, height: 2.8, len: 11 },
       { at: 0.72, height: 3.0, len: 11 },
     ],
+    obstacles: [
+      { at: 0.15, lateral: 0.5 },
+      { at: 0.45, lateral: -0.5 },
+      { at: 0.62, lateral: 0.45 },
+      { at: 0.9, lateral: -0.5 },
+    ],
   },
   {
     id: 'grand-loop',
     name: 'Grand Loop',
-    blurb: 'A long, sweeping high-speed track with rolling hills.',
-    laps: 3,
+    blurb: 'A long, sweeping high-speed track with rolling hills and chicanes.',
     half: 7.5,
     control: [
       { x: 0, z: 200 }, { x: 135, z: 170 }, { x: 200, z: 50 }, { x: 160, z: -95 },
@@ -291,12 +323,17 @@ export const TRACK_DEFS: TrackDef[] = [
       { at: 0.18, height: 3.5, len: 14 },
       { at: 0.6, height: 4.0, len: 15 },
     ],
+    obstacles: [
+      { at: 0.33, lateral: -0.5 },
+      { at: 0.37, lateral: 0.5 },
+      { at: 0.72, lateral: 0.55 },
+      { at: 0.88, lateral: -0.45 },
+    ],
   },
   {
     id: 'canyon-rush',
     name: 'Canyon Rush',
     blurb: 'Plunging dips and steep climbs through a canyon — mind the jumps.',
-    laps: 2,
     half: 6.5,
     control: [
       { x: 0, z: 160 }, { x: 110, z: 150 }, { x: 175, z: 70 }, { x: 150, z: -40 },
@@ -308,12 +345,16 @@ export const TRACK_DEFS: TrackDef[] = [
       { at: 0.34, height: 4.5, len: 14 },
       { at: 0.78, height: 3.8, len: 13 },
     ],
+    obstacles: [
+      { at: 0.12, lateral: 0.5 },
+      { at: 0.5, lateral: -0.5 },
+      { at: 0.66, lateral: 0.5 },
+    ],
   },
   {
     id: 'skyline-figure8',
     name: 'Skyline Weave',
     blurb: 'A weaving skyline circuit that climbs to a soaring ramp finish.',
-    laps: 3,
     half: 6.5,
     control: [
       { x: 0, z: 170 }, { x: 90, z: 150 }, { x: 60, z: 60 }, { x: 150, z: 20 },
@@ -325,6 +366,43 @@ export const TRACK_DEFS: TrackDef[] = [
       { at: 0.22, height: 3.6, len: 13 },
       { at: 0.55, height: 4.2, len: 15 },
       { at: 0.85, height: 3.4, len: 12 },
+    ],
+    obstacles: [
+      { at: 0.1, lateral: -0.5 },
+      { at: 0.4, lateral: 0.5 },
+      { at: 0.68, lateral: -0.5 },
+      { at: 0.78, lateral: 0.45 },
+    ],
+  },
+  {
+    id: 'the-gauntlet',
+    name: 'The Gauntlet',
+    blurb: 'Brutal: narrow, steep, blind crests and a barrier slalom. Few finish clean.',
+    half: 4.6,
+    control: [
+      { x: 0, z: 150 }, { x: 70, z: 145 }, { x: 95, z: 95 }, { x: 55, z: 60 },
+      { x: 105, z: 25 }, { x: 150, z: -30 }, { x: 95, z: -70 }, { x: 130, z: -130 },
+      { x: 35, z: -150 }, { x: 55, z: -205 }, { x: -45, z: -195 }, { x: -25, z: -120 },
+      { x: -95, z: -95 }, { x: -45, z: -45 }, { x: -120, z: -10 }, { x: -150, z: 70 },
+      { x: -70, z: 95 }, { x: -95, z: 150 },
+    ],
+    elev: [0, 4, 10, 14, 9, 2, 8, 16, 10, 0, 6, 13, 7, 14, 9, 2, 7, 3],
+    ramps: [
+      { at: 0.2, height: 4.6, len: 12 },
+      { at: 0.46, height: 5.2, len: 13 },
+      { at: 0.83, height: 4.4, len: 11 },
+    ],
+    obstacles: [
+      { at: 0.08, lateral: 0.6 },
+      { at: 0.13, lateral: -0.6 },
+      { at: 0.3, lateral: 0.6 },
+      { at: 0.36, lateral: -0.55 },
+      { at: 0.55, lateral: 0.6 },
+      { at: 0.6, lateral: -0.6 },
+      { at: 0.64, lateral: 0.5 },
+      { at: 0.72, lateral: -0.6 },
+      { at: 0.9, lateral: 0.55 },
+      { at: 0.95, lateral: -0.55 },
     ],
   },
 ]
@@ -338,10 +416,6 @@ export function getTrack(id: string): BakedTrack {
   const baked = bake(def, true)
   BAKED.set(id, baked)
   return baked
-}
-
-export function trackLaps(id: string): number {
-  return (TRACK_DEFS.find((d) => d.id === id) ?? TRACK_DEFS[0]).laps
 }
 
 /* -------------------------------------------------------------------------- */
@@ -392,6 +466,7 @@ export function makeEndless(): BakedTrack {
     half: ENDLESS_HALF,
     endless: true,
     ramps: [],
+    obstacles: [],
     extend: (to: number) => {
       while (pts.length <= to + 60) {
         const i = pts.length

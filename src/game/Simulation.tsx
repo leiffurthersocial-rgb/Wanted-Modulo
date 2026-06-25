@@ -224,6 +224,29 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       }
     }
 
+    // --- Commit police ground bombs (+ blink) ---
+    for (let i = 0; i < sim.mines.length; i++) {
+      const g = Registry.mines[i]
+      if (!g) continue
+      const m = sim.mines[i]
+      if (m.active) {
+        g.visible = true
+        g.position.set(m.pos.x, surfaceHeight(m.pos.x, m.pos.z), m.pos.z)
+        const light = Registry.mineLights[i]
+        if (light) {
+          // Slow amber pulse while arming, then a fast red blink once live.
+          const live = m.arm <= 0
+          const rate = live ? 11 : 4
+          const on = Math.sin(m.blink * rate) > 0
+          light.emissiveIntensity = on ? 2.2 : 0.15
+          light.color.set(live ? '#ff2a20' : '#ffb020')
+          light.emissive.set(live ? '#ff2a20' : '#ffb020')
+        }
+      } else {
+        g.visible = false
+      }
+    }
+
     // --- Commit particles ---
     const pm = Registry.particles
     if (pm) {

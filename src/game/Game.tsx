@@ -13,6 +13,7 @@ import { Simulation } from '@/game/Simulation'
 import { PolicePool } from '@/game/entities/PolicePool'
 import { HeliPool } from '@/game/entities/HeliPool'
 import { ParticleField } from '@/game/entities/ParticleField'
+import { MineField } from '@/game/entities/MineField'
 import { PropField } from '@/game/entities/PropField'
 import { PowerupField } from '@/game/entities/PowerupField'
 import { Landmarks } from '@/game/world/Landmarks'
@@ -87,6 +88,7 @@ export function Game() {
             <Simulation characterId={character} />
             <PolicePool />
             <HeliPool />
+            <MineField />
             <ParticleField />
           </>
         )}

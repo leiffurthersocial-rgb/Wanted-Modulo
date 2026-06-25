@@ -122,6 +122,25 @@ export const POLICE = {
   attackHeliMinHeat: 8,
 } as const
 
+export const MINES = {
+  /** Max simultaneous police ground bombs (survive mode only). */
+  max: 14,
+  /** Heat at/above which units start dropping bombs. */
+  minHeat: 3,
+  /** Seconds between drop attempts while actively pursued. */
+  dropInterval: 2.6,
+  /** Arming delay after a bomb is dropped (you can outrun a fresh one). */
+  armTime: 1.1,
+  /** How long an armed bomb sits before it auto-detonates. */
+  life: 11,
+  /** Player distance that trips an armed bomb. */
+  triggerRadius: 3.2,
+  /** Blast radius that damages the car. */
+  blastRadius: 6.5,
+  /** Damage dealt at point-blank (falls off toward the blast edge). */
+  damage: 42,
+} as const
+
 export const CAPTURE = {
   /** Radius within which a stopped/slow player is being captured. */
   radius: 6.5,

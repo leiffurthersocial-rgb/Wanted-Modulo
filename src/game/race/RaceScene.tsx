@@ -7,7 +7,7 @@ import { useGameStore } from '@/state/useGameStore'
 import { Environment } from '@/game/world/Environment'
 import { VoxelVehicle } from '@/game/models/VoxelVehicle'
 import { sampleAt, leftNormal } from '@/game/world/track'
-import { BOT_COLOR, RACE_DEF, createRaceState } from './raceState'
+import { RACE_DEF, createRaceState } from './raceState'
 import { stepRace } from './raceState'
 import { Track } from './Track'
 
@@ -17,18 +17,15 @@ export function RaceScene() {
   const { camera } = useThree()
   const mode = useGameStore((s) => s.mode)
   const trackId = useGameStore((s) => s.raceTrackId)
-  const laps = useGameStore((s) => s.raceLaps)
-  const best = useGameStore((s) => s.raceBestFor(trackId, mode === 'endless', laps))
+  const best = useGameStore((s) => s.raceBestFor(trackId, mode === 'endless'))
 
   const race = useMemo(
-    () => createRaceState(mode, trackId, laps, best),
+    () => createRaceState(mode, trackId, best),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
-  const botDef = useMemo(() => ({ ...RACE_DEF, color: BOT_COLOR }), [])
 
   const playerRef = useRef<THREE.Group>(null)
-  const botRef = useRef<THREE.Group>(null)
   const lookTarget = useRef(new THREE.Vector3())
   const statTimer = useRef(1) // publish on the first frame
   const ended = useRef(false)
@@ -72,10 +69,6 @@ export function RaceScene() {
       const driftYaw = Math.atan2(p.state.slip, Math.abs(p.state.speed) + 4) * 0.6
       playerRef.current.position.set(p.pos.x, p.y, p.pos.z)
       playerRef.current.rotation.set(p.falling ? -0.5 : 0, p.state.heading + driftYaw, 0)
-    }
-    if (botRef.current && race.bot) {
-      botRef.current.position.set(race.bot.pos.x, race.bot.y, race.bot.pos.z)
-      botRef.current.rotation.y = race.bot.state.heading
     }
 
     // Chase camera (behind the player along their heading).
@@ -138,11 +131,6 @@ export function RaceScene() {
       <group ref={playerRef}>
         <VoxelVehicle def={RACE_DEF} />
       </group>
-      {race.bot && (
-        <group ref={botRef}>
-          <VoxelVehicle def={botDef} />
-        </group>
-      )}
     </>
   )
 }
@@ -151,11 +139,9 @@ function publish(race: ReturnType<typeof createRaceState>): void {
   const p = race.player
   const total = race.totalDist || 1
   const playerProgress = race.endless ? 0 : Math.max(0, Math.min(1, p.traveled / total))
-  const botProgress = race.endless || !race.bot ? 0 : Math.max(0, Math.min(1, race.bot.traveled / total))
-  const lap = race.endless
-    ? 0
-    : Math.min(race.totalLaps, Math.floor(Math.max(0, p.traveled) / race.track.length) + 1)
-  const position = !race.endless && race.bot ? (p.traveled >= race.bot.traveled ? 1 : 2) : 1
+  const botProgress = 0
+  const lap = race.endless ? 0 : 1
+  const position = 1
   const distance = Math.max(0, p.traveled)
   const speed = Math.abs(p.state.speed)
 

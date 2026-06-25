@@ -6,11 +6,14 @@ import { LANE_GAP, type RaceState } from './raceState'
 
 const CAP = 260 // max deck segments rendered per lane
 const RAMP_CAP = 32 // max ramp wedges rendered (both lanes)
+const OBST_CAP = 48 // max barriers rendered
 
 const DECK_COLOR = '#39414f'
 const RAIL_P = '#ffd23f' // player edge curbs (warm)
 const RAIL_B = '#33b5ff' // bot edge curbs (cool)
 const RAMP_COLOR = '#ff8c42'
+const OBST_COLOR = '#e23b3b'
+const OBST_H = 1.8
 const DECK_H = 0.5
 const RAIL_H = 0.4 // low curbs, not walls — you can drive off the edge
 const RAIL_W = 0.5
@@ -33,6 +36,7 @@ export function Track({ race }: { race: RaceState }) {
   const bDeck = useRef<THREE.InstancedMesh>(null)
   const bRail = useRef<THREE.InstancedMesh>(null)
   const ramps = useRef<THREE.InstancedMesh>(null)
+  const obst = useRef<THREE.InstancedMesh>(null)
   const lastWin = useRef({ lo: -1, hi: -1 })
 
   const scratch = useMemo(
@@ -109,6 +113,19 @@ export function Track({ race }: { race: RaceState }) {
       if (race.bot && r < RAMP_CAP) placeRamp(ramps.current, r++, t, ramp, LANE_GAP, scratch)
     }
     finish(ramps.current, r)
+
+    // --- Barriers (static, world-positioned) ---
+    let o = 0
+    for (const ob of t.obstacles) {
+      if (o >= OBST_CAP) break
+      e.set(0, 0, 0)
+      q.setFromEuler(e)
+      p.set(ob.x, ob.y + OBST_H / 2, ob.z)
+      s.set(ob.r * 2, OBST_H, ob.r * 2)
+      m.compose(p, q, s)
+      obst.current?.setMatrixAt(o++, m)
+    }
+    finish(obst.current, o)
   }
 
   useFrame(() => {
@@ -142,6 +159,10 @@ export function Track({ race }: { race: RaceState }) {
       <instancedMesh ref={ramps} args={[undefined, undefined, RAMP_CAP]} castShadow receiveShadow frustumCulled={false}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color={RAMP_COLOR} roughness={0.6} emissive={RAMP_COLOR} emissiveIntensity={0.2} />
+      </instancedMesh>
+      <instancedMesh ref={obst} args={[undefined, undefined, OBST_CAP]} castShadow frustumCulled={false}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color={OBST_COLOR} roughness={0.5} emissive={OBST_COLOR} emissiveIntensity={0.25} />
       </instancedMesh>
       {race.bot && (
         <>

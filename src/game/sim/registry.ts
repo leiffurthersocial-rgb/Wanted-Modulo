@@ -15,6 +15,8 @@ export const Registry = {
   policeLightR: [] as (THREE.MeshStandardMaterial | null)[],
   helis: [] as (THREE.Group | null)[],
   heliRotors: [] as (THREE.Object3D | null)[],
+  mines: [] as (THREE.Group | null)[],
+  mineLights: [] as (THREE.MeshStandardMaterial | null)[],
   particles: null as THREE.InstancedMesh | null,
   props: {} as Partial<Record<PropType, THREE.InstancedMesh | null>>,
   propsCap: {} as Partial<Record<PropType, THREE.InstancedMesh | null>>,
