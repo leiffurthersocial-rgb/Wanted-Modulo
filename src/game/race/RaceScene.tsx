@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { SIM } from '@/config/constants'
 import { Input } from '@/core/input/InputManager'
 import { useGameStore } from '@/state/useGameStore'
+import { getDebug } from '@/state/useDebugStore'
 import { Environment } from '@/game/world/Environment'
 import { VoxelVehicle } from '@/game/models/VoxelVehicle'
 import { sampleAt, leftNormal } from '@/game/world/track'
@@ -28,6 +29,8 @@ export function RaceScene() {
 
   const playerRef = useRef<THREE.Group>(null)
   const lookTarget = useRef(new THREE.Vector3())
+  // Baseline the debug finish-lap counter so a persisted ping won't fire on load.
+  const finishPing = useRef(getDebug().raceFinishPing)
   const statTimer = useRef(1) // publish on the first frame
   const ended = useRef(false)
 
@@ -41,8 +44,13 @@ export function RaceScene() {
   }, [race])
 
   useFrame((_, delta) => {
-    const dt = Math.min(delta, SIM.maxDt)
+    const debug = getDebug()
+    const scale = debug.enabled ? debug.timeScale : 1
+    const dt = Math.min(delta * scale, SIM.maxDt)
     const store = useGameStore.getState()
+
+    // Any active debug override taints the run — it won't count toward bests.
+    if (debug.enabled && store.phase === 'playing' && !store.cheated) store.markCheated()
 
     if (Input.consumePressed('pause')) {
       if (store.phase === 'playing') store.pause()
@@ -51,6 +59,15 @@ export function RaceScene() {
     if (store.phase !== 'playing') {
       Input.lateUpdate()
       return
+    }
+
+    // Debug: instantly finish the current lap (Race only).
+    if (debug.enabled && debug.raceFinishPing > finishPing.current) {
+      finishPing.current = debug.raceFinishPing
+      if (!race.endless && !race.finished) {
+        race.finished = true
+        race.won = true
+      }
     }
 
     const snap = Input.snapshot()

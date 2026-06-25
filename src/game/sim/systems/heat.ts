@@ -1,7 +1,7 @@
 import { HEAT } from '@/config/constants'
 import { clamp } from '@/core/math/angles'
 import type { SimState } from '@/game/sim/state'
-import { tierFor } from '@/game/sim/heatTable'
+import { MAX_HEAT, tierFor } from '@/game/sim/heatTable'
 import { getDebug } from '@/state/useDebugStore'
 
 /**
@@ -19,11 +19,11 @@ export function updateHeat(state: SimState, dt: number): void {
   const debug = getDebug()
   if (debug.enabled && debug.freezeHeat) {
     heat.floor = debug.forceHeat
-    heat.progress = clamp(debug.forceHeat, 0, 10)
+    heat.progress = clamp(debug.forceHeat, 0, MAX_HEAT)
     return
   }
 
-  heat.floor = Math.min(10, state.acc.time / HEAT.floorTimePerLevel)
+  heat.floor = Math.min(MAX_HEAT, state.acc.time / HEAT.floorTimePerLevel)
 
   const tier = tierFor(Math.floor(heat.progress))
   if (heat.spotted) {
@@ -34,7 +34,7 @@ export function updateHeat(state: SimState, dt: number): void {
     heat.progress -= HEAT.hiddenDecay * dt
   }
 
-  heat.progress = clamp(Math.max(heat.progress, heat.floor), 0, 10)
+  heat.progress = clamp(Math.max(heat.progress, heat.floor), 0, MAX_HEAT)
 }
 
 /** Integer heat level used for tier lookups and the HUD. */

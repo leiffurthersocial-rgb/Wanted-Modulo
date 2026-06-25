@@ -94,8 +94,9 @@ export const HEAT = {
   mayhemBump: 0.25,
   /** Heat decays this fast per second while hidden (down to the floor). */
   hiddenDecay: 0.3,
-  /** Seconds of survival required to push the heat floor up by one level. */
-  floorTimePerLevel: 42,
+  /** Seconds of survival required to push the heat floor up by one level.
+   *  Kept brisk so heat actually ramps (≈20s to L1, ≈40s to L2). */
+  floorTimePerLevel: 20,
   /** Grace period (s) after losing sight before units enter SEARCH. */
   lostGrace: 2.0,
   /** Seconds a search persists before units give up and heat can fall. */
@@ -103,8 +104,8 @@ export const HEAT = {
 } as const
 
 export const POLICE = {
-  maxUnits: 20,
-  maxHelis: 3,
+  maxUnits: 28,
+  maxHelis: 4,
   /** Ground unit sight range and field-of-view (radians, half-angle). */
   sightRange: 70,
   sightFov: 1.15,

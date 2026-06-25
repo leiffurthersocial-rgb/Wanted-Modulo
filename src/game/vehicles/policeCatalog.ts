@@ -6,6 +6,8 @@ export type PoliceClassId =
   | 'heavy'
   | 'swat'
   | 'military'
+  | 'apc'
+  | 'tank'
 
 export interface PoliceClass {
   id: PoliceClassId
@@ -89,6 +91,26 @@ export const POLICE_CLASSES: Record<PoliceClassId, PoliceClass> = {
     accent: '#262e1b',
     lightbar: false,
     minHeat: 5,
+  },
+  apc: {
+    id: 'apc',
+    name: 'APC',
+    // Armored personnel carrier: fast for its bulk, very tough, rams hard.
+    def: def('apc', 29, 14, 1.6, 2.9, 640, { length: 5.2, width: 2.45, height: 2.2 }),
+    body: '#36402b',
+    accent: '#1c2214',
+    lightbar: false,
+    minHeat: 10,
+  },
+  tank: {
+    id: 'tank',
+    name: 'Tank',
+    // Slow but near-unkillable and brutal on contact — escapable by sheer speed.
+    def: def('tank', 22, 9, 1.1, 3.6, 1100, { length: 5.6, width: 2.7, height: 2.3 }),
+    body: '#4a5234',
+    accent: '#23281a',
+    lightbar: false,
+    minHeat: 11,
   },
 }
 

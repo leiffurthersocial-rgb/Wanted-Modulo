@@ -1,6 +1,6 @@
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
-import { HEAT_TABLE } from '@/game/sim/heatTable'
+import { HEAT_TABLE, MAX_HEAT } from '@/game/sim/heatTable'
 import type { ChaseStats, RaceStats } from '@/types'
 import { Minimap } from './Minimap'
 
@@ -102,9 +102,9 @@ function HeatMeter({ heat }: { heat: number }) {
           Heat {heat} · {tier.name}
         </div>
         <div className="heat-bar">
-          {Array.from({ length: 10 }, (_, i) => {
+          {Array.from({ length: MAX_HEAT }, (_, i) => {
             const on = i < heat
-            const hot = i >= 7
+            const hot = i >= MAX_HEAT - 4
             return <div key={i} className={`heat-pip ${on ? (hot ? 'hot' : 'on') : ''}`} />
           })}
         </div>

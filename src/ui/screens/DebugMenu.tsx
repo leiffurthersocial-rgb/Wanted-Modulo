@@ -1,16 +1,18 @@
 import { useRef } from 'react'
 import { useDebugStore } from '@/state/useDebugStore'
+import { MAX_HEAT } from '@/game/sim/heatTable'
 
 /**
  * Returns a click handler that fires `onUnlock` after 3 quick taps (within
- * ~700ms of each other). Used to reveal the debug menu from a title element.
+ * ~900ms of each other). Used to reveal the debug menu from a title element —
+ * works on the main menu title and the "PAUSED" header alike.
  */
 export function useTripleTap(onUnlock: () => void): () => void {
   const taps = useRef(0)
   const last = useRef(0)
   return () => {
     const now = performance.now()
-    taps.current = now - last.current < 700 ? taps.current + 1 : 1
+    taps.current = now - last.current < 900 ? taps.current + 1 : 1
     last.current = now
     if (taps.current >= 3) {
       taps.current = 0
@@ -105,10 +107,10 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
           </div>
           <div className="setting-row">
             <span className="k">Forced Heat ({Math.round(d.forceHeat)})</span>
-            <Slider value={d.forceHeat} min={0} max={10} step={1} onChange={(v) => d.set('forceHeat', v)} />
+            <Slider value={d.forceHeat} min={0} max={MAX_HEAT} step={1} onChange={(v) => d.set('forceHeat', v)} />
           </div>
 
-          <h3>Physics</h3>
+          <h3>Physics · all driving modes</h3>
           <div className="setting-row">
             <span className="k">Vehicle Speed ({d.speedMult.toFixed(2)}×)</span>
             <Slider value={d.speedMult} min={0.25} max={20} step={0.25} onChange={(v) => d.set('speedMult', v)} />
@@ -134,7 +136,37 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
             <Slider value={d.scoreMult} min={0} max={20} step={0.5} onChange={(v) => d.set('scoreMult', v)} />
           </div>
 
-          <h3>Actions</h3>
+          <h3>Race &amp; Endless</h3>
+          <div className="setting-row">
+            <span className="k">No Fall Off (gaps &amp; edges)</span>
+            <Toggle value={d.raceNoFall} onChange={(v) => d.set('raceNoFall', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Finish Lap Now</span>
+            <button
+              className="btn ghost small"
+              onClick={() => d.set('raceFinishPing', d.raceFinishPing + 1)}
+            >
+              Finish
+            </button>
+          </div>
+
+          <h3>Cop Chase</h3>
+          <div className="setting-row">
+            <span className="k">Suspect Can't Escape</span>
+            <Toggle value={d.chaseNoEscape} onChange={(v) => d.set('chaseNoEscape', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Bust Current Suspect</span>
+            <button
+              className="btn ghost small"
+              onClick={() => d.set('chaseCatchPing', d.chaseCatchPing + 1)}
+            >
+              Bust
+            </button>
+          </div>
+
+          <h3>Actions · survive &amp; chase</h3>
           <div className="setting-row">
             <span className="k">Repair Vehicle</span>
             <button className="btn ghost small" onClick={() => d.set('repairPing', d.repairPing + 1)}>

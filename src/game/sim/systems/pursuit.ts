@@ -5,7 +5,7 @@ import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision, losBlocked } from '@/game/sim/los'
 import { landmarkCollision } from '@/game/world/landmarkModel'
 import { isWater, sampleHeight } from '@/game/world/terrain'
-import { tierFor, type HeatTier } from '@/game/sim/heatTable'
+import { MAX_HEAT, tierFor, type HeatTier } from '@/game/sim/heatTable'
 import { damageTier, type PoliceUnit, type SimState } from '@/game/sim/state'
 import { getDebug } from '@/state/useDebugStore'
 import { damageWorldVehicle } from './destruction'
@@ -233,7 +233,7 @@ function damagePolice(state: SimState, u: PoliceUnit, amount: number): void {
     state.score.cops++
     state.score.value += SCORE.copDestroyed
     // Mayhem: wrecking a cruiser cranks the heat.
-    state.heat.progress = Math.min(10, state.heat.progress + HEAT.mayhemBump)
+    state.heat.progress = Math.min(MAX_HEAT, state.heat.progress + HEAT.mayhemBump)
   }
 }
 

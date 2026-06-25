@@ -11,7 +11,7 @@ export function PauseMenu() {
 
   return (
     <div className="screen overlay">
-      <div className="title" onClick={onTitleTap}>
+      <div className="title" onClick={onTitleTap} style={{ cursor: 'pointer' }}>
         <div className="wanted" style={{ fontSize: '2rem' }}>PAUSED</div>
       </div>
       <div className="btn-row">

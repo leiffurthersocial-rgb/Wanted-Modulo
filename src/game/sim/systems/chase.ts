@@ -5,7 +5,11 @@ import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { buildingCollision } from '@/game/sim/los'
 import { isWater, surfaceHeight } from '@/game/world/terrain'
 import type { ChaseSim, SimState, SuspectEntity } from '@/game/sim/state'
+import { getDebug } from '@/state/useDebugStore'
 import { spawnDebris } from './particles'
+
+/** Last-seen debug bust-suspect counter (baselined when a chase starts). */
+let catchPingSeen = 0
 
 /* -------------------------------------------------------------------------- */
 /*  Cop-chase mode (you are the police, hunting a fleeing AI suspect).         */
@@ -98,6 +102,8 @@ export function createSuspect(px: number, pz: number, caught: number): SuspectEn
 
 /** Initial chase state for a new pursuit run. */
 export function createChase(px: number, pz: number): ChaseSim {
+  // Baseline the debug bust counter so a persisted ping doesn't fire on start.
+  catchPingSeen = getDebug().chaseCatchPing
   return {
     suspect: createSuspect(px, pz, 0),
     caught: 0,
@@ -119,6 +125,14 @@ export function updateChase(state: SimState, dt: number): void {
   if (!chase || chase.escaped) return
   const cop = state.player.pos
   const s = chase.suspect
+
+  // Debug: instant bust of the current suspect.
+  const dbg = getDebug()
+  if (dbg.chaseCatchPing !== catchPingSeen) {
+    const advanced = dbg.chaseCatchPing > catchPingSeen
+    catchPingSeen = dbg.chaseCatchPing
+    if (advanced && dbg.enabled) chase.bust = 1
+  }
   if (chase.banner > 0) chase.banner = Math.max(0, chase.banner - dt)
 
   const factor = speedFactor(chase.caught)
@@ -213,8 +227,9 @@ export function updateChase(state: SimState, dt: number): void {
 
   chase.bust = clamp(chase.bust, 0, 1)
 
-  // --- Escape tracking ---
-  if (dist > ESCAPE_DIST) {
+  // --- Escape tracking (debug can freeze it so the suspect never gets away) ---
+  const noEscape = dbg.enabled && dbg.chaseNoEscape
+  if (dist > ESCAPE_DIST && !noEscape) {
     chase.escapeTimer += dt
     if (chase.escapeTimer >= ESCAPE_LIMIT) {
       chase.escaped = true

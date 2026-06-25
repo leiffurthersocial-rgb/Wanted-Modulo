@@ -54,11 +54,12 @@ shares the rolling terrain and ramps, ramping up speed and curviness the further
 survive.
 
 In **Survive**, the police never spawn in front of you — they close in from behind
-and to the sides — and they arrive **fast**, escalating through a reworked heat
-curve (fleeing fast and causing mayhem cranks it; truly hiding cools it). Threats
-stack from dark-liveried patrol cars up through interceptors, heavy units, SWAT
-vans and armored **military** units, plus helicopters and police **ground bombs**
-that arm, blink and detonate. Counter-play: **CLOAK** hides you from cops *and*
+and to the sides — and they arrive **fast**, escalating through a 14-level heat
+curve (≈20s to your first star; fleeing fast and causing mayhem cranks it, truly
+hiding cools it). Threats stack from dark-liveried patrol cars up through
+interceptors, heavy units, SWAT vans, armored **military** trucks and — at the
+highest heat — **APCs** and near-unkillable **tanks**, plus attack helicopters and
+police **ground bombs** that arm, blink and detonate. Counter-play: **CLOAK** hides you from cops *and*
 helicopters (they lose you completely), and the buffed **EMP** clears a wide pack
 of cars and now knocks helicopters out of the sky.
 

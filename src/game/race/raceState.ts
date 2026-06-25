@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { GameMode, VehicleDef } from '@/types'
 import type { VehicleState } from '@/game/vehicles/vehiclePhysics'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
+import { getDebug } from '@/state/useDebugStore'
 import {
   type BakedTrack,
   getTrack,
@@ -139,10 +140,16 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
 
   const { track, player } = state
 
+  // Debug overrides (apply to Race + Endless when the master switch is on).
+  const dbg = getDebug()
+  const dOn = dbg.enabled
+  const gravity = GRAVITY * (dOn ? dbg.gravityMult : 1)
+  const noFall = dOn && dbg.raceNoFall
+
   // --- Player ---
   if (player.falling) {
     // Dropping off the edge of the track into the void.
-    player.vy -= GRAVITY * dt
+    player.vy -= gravity * dt
     player.y += player.vy * dt
     player.pos.x += Math.sin(player.state.heading) * player.state.speed * dt * 0.4
     player.pos.z += Math.cos(player.state.heading) * player.state.speed * dt * 0.4
@@ -173,7 +180,8 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
     player.state.slip = 0
   } else {
     const prevS = player.lastS
-    const speedMult = state.endless ? 1 + Math.min(1.1, player.traveled / 2000) : 1
+    const speedMult =
+      (state.endless ? 1 + Math.min(1.1, player.traveled / 2000) : 1) * (dOn ? dbg.speedMult : 1)
     const throttle = state.endless ? 1 : input.throttle
     const { dx, dz } = stepVehicle(
       player.state,
@@ -197,11 +205,11 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
 
     if (player.airborne) {
       // Ballistic flight off a ramp; land when we meet the deck again.
-      player.vy -= GRAVITY * dt
+      player.vy -= gravity * dt
       player.y += player.vy * dt
       if (player.y <= ground && player.vy <= 0) {
         const offEdge = Math.abs(proj.lateral) - track.half - CAR_HALF
-        if (offEdge > 0 || inGap(track, proj.s)) {
+        if ((offEdge > 0 || inGap(track, proj.s)) && !noFall) {
           // Overshot the landing — came down off the edge or short into a gap.
           player.airborne = false
           player.falling = true
@@ -213,7 +221,7 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
       }
     } else {
       const offEdge = Math.abs(proj.lateral) - track.half - CAR_HALF
-      if (offEdge > 0) {
+      if (offEdge > 0 && !noFall) {
         // Drove off the edge — fall (no invisible walls). Endless dies; race
         // recovers once it has dropped far enough.
         player.falling = true
@@ -232,8 +240,8 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
         ) {
           player.airborne = true
           const slope = prevR.ramp.height / prevR.ramp.len
-          player.vy = Math.abs(player.state.speed) * slope + 1.5
-        } else if (inGap(track, proj.s)) {
+          player.vy = (Math.abs(player.state.speed) * slope + 1.5) * (dOn ? dbg.jumpMult : 1)
+        } else if (inGap(track, proj.s) && !noFall) {
           // Reached a hole without enough air to clear it — drop in.
           player.falling = true
           player.vy = -1
