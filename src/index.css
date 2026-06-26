@@ -725,6 +725,20 @@ canvas {
   font-size: 0.85rem;
 }
 
+.debug-spawn-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.4rem;
+}
+.debug-spawn-grid .btn.small {
+  padding: 0.4rem 0.3rem;
+  font-size: 0.78rem;
+}
+@media (max-width: 520px) {
+  .debug-spawn-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .debug-actions {
   display: flex;
   gap: 0.7rem;

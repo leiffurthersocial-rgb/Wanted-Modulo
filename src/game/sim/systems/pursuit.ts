@@ -244,8 +244,16 @@ export function updatePolice(state: SimState, dt: number, level: number): void {
   const p = state.player
   const spotted = state.heat.spotted
 
+  // Debug: freeze all units in place (AI paused) for staging experiments.
+  const frozen = getDebug().enabled && getDebug().freezePolice
+
   for (const u of state.police) {
     if (!u.active) continue
+    if (frozen) {
+      u.state.speed = 0
+      u.state.slip = 0
+      continue
+    }
 
     // --- Decide target ---
     let tx = u.pos.x
@@ -369,8 +377,13 @@ export function updateHelis(state: SimState, dt: number): void {
   const p = state.player
   // CLOAK: helicopters lose the player entirely — they hover and hold fire.
   const cloaked = state.power.cloak > 0
+  const frozen = getDebug().enabled && getDebug().freezePolice
   for (const h of state.helis) {
     if (!h.active) continue
+    if (frozen) {
+      h.strikeFuse = -1
+      continue
+    }
     if (cloaked) {
       h.pos.y += (POLICE.heliHeight - h.pos.y) * (1 - Math.exp(-1.6 * dt))
       h.strikeFuse = -1

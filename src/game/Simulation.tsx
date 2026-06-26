@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { CharacterId } from '@/types'
@@ -52,6 +52,11 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const prevClasses = useRef<PoliceClassId[]>(useFleetStore.getState().policeClasses.slice())
 
   const sim = useMemo(() => createSimState(mode), [mode])
+
+  // Rendered vehicle bodies are reactive so debug spawns (and any runtime swap)
+  // show the right model. Seeded from the sim's initial defs.
+  const [vehicleDefs, setVehicleDefs] = useState(() => sim.vehicles.map((v) => v.def))
+  const prevVehicleDefs = useRef(sim.vehicles.map((v) => v.def))
 
   useFrame((frameState, delta) => {
     const debug = getDebug()
@@ -299,6 +304,16 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     }
     if (classesChanged) setPoliceClasses(prevClasses.current.slice())
 
+    // --- Reactive vehicle body swaps (debug spawn / runtime def change) ---
+    let vehChanged = false
+    for (let i = 0; i < sim.vehicles.length; i++) {
+      if (sim.vehicles[i].def !== prevVehicleDefs.current[i]) {
+        prevVehicleDefs.current[i] = sim.vehicles[i].def
+        vehChanged = true
+      }
+    }
+    if (vehChanged) setVehicleDefs(prevVehicleDefs.current.slice())
+
     // --- End-of-run checks ---
     if (sim.busted || (sim.chase?.escaped ?? false)) {
       publishStats(sim, peakHeat)
@@ -359,7 +374,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
           position={spawn.position}
           rotation={[0, spawn.heading, 0]}
         >
-          <VoxelVehicle def={spawn.def} />
+          <VoxelVehicle def={vehicleDefs[i] ?? spawn.def} />
         </group>
       ))}
 

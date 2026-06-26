@@ -2,6 +2,18 @@ import { useRef } from 'react'
 import { useDebugStore } from '@/state/useDebugStore'
 import { MAX_HEAT } from '@/game/sim/heatTable'
 
+/** Vehicles offered by the debug "Spawn Vehicle" grid (rares first). */
+const SPAWNABLE: { id: string; label: string }[] = [
+  { id: 'phantom', label: '⚡ Phantom' },
+  { id: 'moped', label: '🛵 Moped' },
+  { id: 'titan', label: '🚜 Titan' },
+  { id: 'viper', label: 'Viper' },
+  { id: 'brute', label: 'Brute' },
+  { id: 'cruiser', label: 'Cruiser' },
+  { id: 'ranger', label: 'Ranger' },
+  { id: 'hauler', label: 'Hauler' },
+]
+
 /**
  * Returns a click handler that fires `onUnlock` after 3 quick taps (within
  * ~900ms of each other). Used to reveal the debug menu from a title element —
@@ -99,6 +111,35 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
             <span className="k">Infinite Nitro</span>
             <Toggle value={d.infiniteNitro} onChange={(v) => d.set('infiniteNitro', v)} />
           </div>
+          <div className="setting-row">
+            <span className="k">Infinite Shield</span>
+            <Toggle value={d.infiniteShield} onChange={(v) => d.set('infiniteShield', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Infinite Cloak</span>
+            <Toggle value={d.infiniteCloak} onChange={(v) => d.set('infiniteCloak', v)} />
+          </div>
+          <div className="setting-row">
+            <span className="k">Freeze Police &amp; Helis</span>
+            <Toggle value={d.freezePolice} onChange={(v) => d.set('freezePolice', v)} />
+          </div>
+
+          <h3>Spawn Vehicle</h3>
+          <p className="muted debug-note">Drops you straight into the car (survive &amp; chase).</p>
+          <div className="debug-spawn-grid">
+            {SPAWNABLE.map((v) => (
+              <button
+                key={v.id}
+                className="btn ghost small"
+                onClick={() => {
+                  d.set('spawnVehicleId', v.id)
+                  d.set('spawnVehiclePing', d.spawnVehiclePing + 1)
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
 
           <h3>Heat</h3>
           <div className="setting-row">
@@ -189,6 +230,12 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
             <span className="k">Grant Nitro</span>
             <button className="btn ghost small" onClick={() => d.set('grantNitroPing', d.grantNitroPing + 1)}>
               Nitro
+            </button>
+          </div>
+          <div className="setting-row">
+            <span className="k">Grant Cloak</span>
+            <button className="btn ghost small" onClick={() => d.set('grantCloakPing', d.grantCloakPing + 1)}>
+              Cloak
             </button>
           </div>
           <div className="setting-row">

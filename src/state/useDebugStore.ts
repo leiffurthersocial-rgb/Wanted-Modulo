@@ -20,6 +20,12 @@ export interface DebugStore {
   noPolice: boolean
   /** Keep the nitro boost permanently topped up. */
   infiniteNitro: boolean
+  /** Keep the shield permanently topped up. */
+  infiniteShield: boolean
+  /** Keep cloak (invisible to police/helis) permanently topped up. */
+  infiniteCloak: boolean
+  /** Freeze all police + helicopters in place (AI paused) for staging. */
+  freezePolice: boolean
   /** Police are destroyed by a single hit. */
   oneHitCops: boolean
   /** Hold heat at `forceHeat` instead of letting it escalate/decay. */
@@ -56,6 +62,12 @@ export interface DebugStore {
   grantNitroPing: number
   /** Detonate an EMP around the player (wipes nearby police). */
   empPing: number
+  /** Grant a fresh cloak. */
+  grantCloakPing: number
+  /** Spawn (or instantly become) the vehicle named by `spawnVehicleId`. */
+  spawnVehiclePing: number
+  /** Which vehicle id the spawn action drops the player into. */
+  spawnVehicleId: string
   /** Race/Endless: instantly complete the current lap. */
   raceFinishPing: number
   /** Cop Chase: instantly bust the current suspect. */
@@ -74,6 +86,9 @@ const DEFAULTS: DebugState = {
   noCapture: false,
   noPolice: false,
   infiniteNitro: false,
+  infiniteShield: false,
+  infiniteCloak: false,
+  freezePolice: false,
   oneHitCops: false,
   freezeHeat: false,
   raceNoFall: false,
@@ -90,6 +105,9 @@ const DEFAULTS: DebugState = {
   grantShieldPing: 0,
   grantNitroPing: 0,
   empPing: 0,
+  grantCloakPing: 0,
+  spawnVehiclePing: 0,
+  spawnVehicleId: 'phantom',
   raceFinishPing: 0,
   chaseCatchPing: 0,
 }

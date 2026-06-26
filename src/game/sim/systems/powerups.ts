@@ -1,11 +1,12 @@
 import { SCORE } from '@/config/constants'
 import { sampleHeight } from '@/game/world/terrain'
 import type { SimState } from '@/game/sim/state'
+import { VEHICLES } from '@/game/vehicles/vehicleCatalog'
 import { getDebug } from '@/state/useDebugStore'
 import { spawnExplosion } from './particles'
 
 /** Last serviced values of the debug one-shot action counters. */
-const lastPing = { repair: 0, teleport: 0, shield: 0, nitro: 0, emp: 0 }
+const lastPing = { repair: 0, teleport: 0, shield: 0, nitro: 0, emp: 0, cloak: 0, spawnVeh: 0 }
 
 /**
  * Snapshots the current debug action counters as "already serviced" so that
@@ -19,6 +20,45 @@ export function resetDebugActionPings(): void {
   lastPing.shield = d.grantShieldPing
   lastPing.nitro = d.grantNitroPing
   lastPing.emp = d.empPing
+  lastPing.cloak = d.grantCloakPing
+  lastPing.spawnVeh = d.spawnVehiclePing
+}
+
+/** Debug: drop the player into (or instantly become) a chosen vehicle. */
+function spawnDebugVehicle(state: SimState, id: string): void {
+  const def = VEHICLES[id]
+  if (!def) return
+  const p = state.player
+  // In a car already → swap the current car's body in place; on foot → grab a
+  // free slot, drop it under the player and climb in.
+  let idx = p.mode === 'vehicle' ? p.vehicleIndex : -1
+  if (idx < 0) {
+    for (let i = 0; i < state.vehicles.length; i++) {
+      if (i === p.vehicleIndex) continue
+      if (!state.vehicles[i].occupied) {
+        idx = i
+        break
+      }
+    }
+    if (idx < 0) idx = 0
+  }
+  const v = state.vehicles[idx]
+  v.def = def
+  v.health = def.durability
+  v.wrecked = false
+  v.smokeTimer = 0
+  v.squash = 0
+  if (p.mode !== 'vehicle') {
+    v.pos.copy(p.pos)
+    v.y = sampleHeight(p.pos.x, p.pos.z)
+    v.vy = 0
+    v.state.heading = p.heading
+    v.state.speed = 0
+    v.state.slip = 0
+    v.occupied = true
+    p.mode = 'vehicle'
+    p.vehicleIndex = idx
+  }
 }
 
 /** Effect tuning. */
@@ -47,8 +87,12 @@ export function updatePowerups(state: SimState, dt: number): void {
   const debug = getDebug()
   if (debug.enabled) {
     if (debug.infiniteNitro) state.power.boost = Math.max(state.power.boost, POWER.nitroDuration)
+    if (debug.infiniteShield) state.power.shield = Math.max(state.power.shield, POWER.shieldDuration)
+    if (debug.infiniteCloak) state.power.cloak = Math.max(state.power.cloak, POWER.cloakDuration)
 
     // One-shot actions: fire when the counter advances (ignore reset-to-zero).
+    if (debug.grantCloakPing > lastPing.cloak) applyEffect(state, 'cloak')
+    if (debug.spawnVehiclePing > lastPing.spawnVeh) spawnDebugVehicle(state, debug.spawnVehicleId)
     if (debug.repairPing > lastPing.repair) {
       if (p.mode === 'vehicle') {
         const v = state.vehicles[p.vehicleIndex]
@@ -76,6 +120,8 @@ export function updatePowerups(state: SimState, dt: number): void {
     lastPing.shield = debug.grantShieldPing
     lastPing.nitro = debug.grantNitroPing
     lastPing.emp = debug.empPing
+    lastPing.cloak = debug.grantCloakPing
+    lastPing.spawnVeh = debug.spawnVehiclePing
   }
 
   if (state.power.boost > 0) state.power.boost = Math.max(0, state.power.boost - dt)
