@@ -38,10 +38,6 @@ export function Statistics() {
           <div className="v">{p.totalRuns}</div>
           <div className="k">Total Time Survived</div>
           <div className="v">{fmtTime(p.totalTime)}</div>
-          <div className="k">Most Suspects Caught</div>
-          <div className="v">{p.bestCaught}</div>
-          <div className="k">Endless Best</div>
-          <div className="v">{Math.round(p.endlessBest)}m</div>
           {TRACK_DEFS.map((t) => (
             <div key={t.id} style={{ display: 'contents' }}>
               <div className="k">{t.name} — Best Lap</div>

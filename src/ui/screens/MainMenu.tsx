@@ -16,14 +16,9 @@ export function MainMenu() {
     setMode(mode)
     setPhase('characterSelect')
   }
-  const startRun = useGameStore((s) => s.startRun)
   const race = () => {
     setMode('race')
     setPhase('raceSetup')
-  }
-  const endless = () => {
-    setMode('endless')
-    startRun()
   }
 
   return (
@@ -38,16 +33,8 @@ export function MainMenu() {
         <button className="btn primary" onClick={() => play('survive')}>
           Play
         </button>
-        <button className="btn primary alt" onClick={() => play('pursuit')}>
-          🚔 Cop Chase
-        </button>
-      </div>
-      <div className="btn-row">
         <button className="btn primary race" onClick={race}>
           🏁 Race
-        </button>
-        <button className="btn primary race" onClick={endless}>
-          ♾ Endless
         </button>
       </div>
       <div className="btn-row">
@@ -68,7 +55,7 @@ export function MainMenu() {
       )}
 
       <div className="muted" style={{ position: 'absolute', bottom: 18 }}>
-        Survive an endless chase — or flip the badge and hunt suspects in Cop Chase
+        Survive the escalating chase — or set a hot lap in Race
       </div>
 
       {showDebug && <DebugMenu onClose={() => setShowDebug(false)} />}

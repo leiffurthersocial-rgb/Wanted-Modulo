@@ -54,32 +54,14 @@ export function CharacterSelect() {
   const selectCharacter = useGameStore((s) => s.selectCharacter)
   const startRun = useGameStore((s) => s.startRun)
   const setPhase = useGameStore((s) => s.setPhase)
-  const mode = useGameStore((s) => s.mode)
-  const setMode = useGameStore((s) => s.setMode)
 
   return (
     <div className="screen">
       <div className="panel">
         <h2>Select Character</h2>
 
-        <div className="mode-switch">
-          <button
-            className={mode === 'survive' ? 'active' : ''}
-            onClick={() => setMode('survive')}
-          >
-            🏃 Survive
-          </button>
-          <button
-            className={mode === 'pursuit' ? 'active' : ''}
-            onClick={() => setMode('pursuit')}
-          >
-            🚔 Cop Chase
-          </button>
-        </div>
         <div className="mode-blurb">
-          {mode === 'pursuit'
-            ? 'You ARE the police. Chase down the fleeing suspect and bust them — each catch spawns a faster one.'
-            : 'You are wanted. Outrun the police across an endless city for as long as you can.'}
+          You are wanted. Outrun the escalating police force across the city for as long as you can.
         </div>
 
         <div className="char-grid">
@@ -101,7 +83,7 @@ export function CharacterSelect() {
 
       <div className="btn-row">
         <button className="btn primary" onClick={startRun}>
-          {mode === 'pursuit' ? 'Start Patrol' : 'Start Run'}
+          Start Run
         </button>
         <button className="btn ghost" onClick={() => setPhase('menu')}>
           Back

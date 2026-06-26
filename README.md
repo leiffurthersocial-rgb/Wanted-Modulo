@@ -38,23 +38,22 @@ On foot you can wade and **swim across rivers** and climb back out on the far
 bank. In a vehicle, hit a **ramp** at speed to catch air, and yank the
 **handbrake** to drift around corners.
 
-## Race & Endless
+## Race
 
-Eight hand-built circuits — from the friendly **Sunset Oval** through Switchback
-Ridge, Grand Loop, Canyon Rush, Skyline Weave and Riptide Coast, up to the brutal
-**Gauntlet** and the brutal-but-beatable **Vertigo** — that **roll up and down**
-over hills, plunge through dips, and string **launch ramps** over real **gaps** in
-the deck: clear the jump or fall in. **Barriers** force a slalom on top of that.
-Race is a **solo, single-lap time trial**: just the clock and your **best lap**.
-There are no invisible walls, so run wide and you'll fall clean off the edge; clip
-a barrier and you'll lose nearly all your speed. Each circuit is lined with its own
-**themed scenery** — palms on the coast, pines on the ridge, neon pylons on the
-skyline, glowing crystals on Vertigo — so every track feels distinct. **Endless**
-shares the rolling terrain and ramps, ramping up speed and curviness the further you
-survive.
+Ten hand-built circuits — from the gentle **Harbor Cruise** and **Sunset Oval**,
+through Switchback Ridge, Grand Loop, Canyon Rush, Skyline Weave and Riptide Coast,
+up to the brutal **Gauntlet**, the brutal-but-beatable **Vertigo**, and the
+near-impossible **Oblivion** — that **roll up and down** over hills, plunge through
+dips, and string **launch ramps** over real **gaps** in the deck: clear the jump or
+fall in. **Barriers** force a slalom on top of that. Race is a **solo, single-lap
+time trial**: just the clock and your **best lap**. There are no invisible walls, so
+run wide and you'll fall clean off the edge; clip a barrier and you'll lose nearly
+all your speed. Each circuit is lined with its own **themed scenery** — palms on the
+coast, pines on the ridge, neon pylons on the skyline, glowing crystals on the
+hardest tracks — so every track feels distinct.
 
-In **Survive**, the police never spawn in front of you — they close in from behind
-and to the sides — and they arrive **fast**, escalating through a 14-level heat
+In **Survive**, the police close in from **every direction — including ahead** — and
+they arrive **fast**, escalating through a 14-level heat
 curve (≈20s to your first star; fleeing fast and causing mayhem cranks it, truly
 hiding cools it). Threats stack from dark-liveried patrol cars up through
 interceptors, heavy units, SWAT vans, armored **military** trucks and — at the

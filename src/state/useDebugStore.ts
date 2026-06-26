@@ -30,10 +30,8 @@ export interface DebugStore {
   oneHitCops: boolean
   /** Hold heat at `forceHeat` instead of letting it escalate/decay. */
   freezeHeat: boolean
-  /** Race/Endless: never fall off the edge or into gaps (free experimentation). */
+  /** Race: never fall off the edge or into gaps (free experimentation). */
   raceNoFall: boolean
-  /** Cop Chase: the suspect can never escape (escape timer frozen). */
-  chaseNoEscape: boolean
 
   // --- Sliders ---
   /** Heat level applied while `freezeHeat` is on (0..10). */
@@ -68,10 +66,8 @@ export interface DebugStore {
   spawnVehiclePing: number
   /** Which vehicle id the spawn action drops the player into. */
   spawnVehicleId: string
-  /** Race/Endless: instantly complete the current lap. */
+  /** Race: instantly complete the current lap. */
   raceFinishPing: number
-  /** Cop Chase: instantly bust the current suspect. */
-  chaseCatchPing: number
 
   set: <K extends keyof DebugState>(key: K, value: DebugState[K]) => void
   /** Restore all gameplay overrides to their neutral defaults. */
@@ -92,7 +88,6 @@ const DEFAULTS: DebugState = {
   oneHitCops: false,
   freezeHeat: false,
   raceNoFall: false,
-  chaseNoEscape: false,
   forceHeat: 5,
   speedMult: 1,
   footSpeedMult: 1,
@@ -109,7 +104,6 @@ const DEFAULTS: DebugState = {
   spawnVehiclePing: 0,
   spawnVehicleId: 'phantom',
   raceFinishPing: 0,
-  chaseCatchPing: 0,
 }
 
 export const useDebugStore = create<DebugStore>()(

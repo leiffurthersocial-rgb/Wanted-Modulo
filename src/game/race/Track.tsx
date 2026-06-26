@@ -2,15 +2,14 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { inGap, leftNormal, sampleAt, type BakedRamp, type BakedTrack } from '@/game/world/track'
-import { LANE_GAP, type RaceState } from './raceState'
+import { type RaceState } from './raceState'
 
-const CAP = 260 // max deck segments rendered per lane
-const RAMP_CAP = 32 // max ramp wedges rendered (both lanes)
+const CAP = 320 // max deck segments rendered
+const RAMP_CAP = 24 // max ramp wedges rendered
 const OBST_CAP = 48 // max barriers rendered
 
 const DECK_COLOR = '#39414f'
-const RAIL_P = '#ffd23f' // player edge curbs (warm)
-const RAIL_B = '#33b5ff' // bot edge curbs (cool)
+const RAIL_P = '#ffd23f' // edge curbs
 const RAMP_COLOR = '#ff8c42'
 const OBST_COLOR = '#e23b3b'
 const OBST_H = 1.8
@@ -22,22 +21,17 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0)
 const X_AXIS = new THREE.Vector3(1, 0, 0)
 
 /**
- * Renders a track as voxel slabs (deck) + low edge curbs along the centreline,
- * following the track's rolling elevation, plus launch-ramp wedges. In
- * head-to-head Race the bot's parallel lane is drawn too. For the endless track
- * the slabs stream in a window around the player.
- *
- * The curbs are cosmetic only — there are no invisible walls, so running wide
- * sends the car off the edge.
+ * Renders a closed circuit as voxel slabs (deck) + low edge curbs along the
+ * centreline, following the track's rolling elevation, plus launch-ramp wedges
+ * and barriers. The curbs are cosmetic only — there are no invisible walls, so
+ * running wide sends the car off the edge.
  */
 export function Track({ race }: { race: RaceState }) {
   const pDeck = useRef<THREE.InstancedMesh>(null)
   const pRail = useRef<THREE.InstancedMesh>(null)
-  const bDeck = useRef<THREE.InstancedMesh>(null)
-  const bRail = useRef<THREE.InstancedMesh>(null)
   const ramps = useRef<THREE.InstancedMesh>(null)
   const obst = useRef<THREE.InstancedMesh>(null)
-  const lastWin = useRef({ lo: -1, hi: -1 })
+  const built = useRef(false)
 
   const scratch = useMemo(
     () => ({
@@ -51,13 +45,11 @@ export function Track({ race }: { race: RaceState }) {
     [],
   )
 
-  const fill = (lo: number, hi: number) => {
+  const fill = () => {
     const t = race.track
     const { m, q, e, p, s } = scratch
     let count = 0
-    for (let i = lo; i <= hi; i++) {
-      const idx = t.closed ? ((i % t.pts.length) + t.pts.length) % t.pts.length : i
-      if (idx < 0 || idx >= t.pts.length) continue
+    for (let idx = 0; idx < t.pts.length; idx++) {
       const a = t.pts[idx]
       const b = t.pts[(idx + 1) % t.pts.length]
       const dx = b.x - a.x
@@ -77,43 +69,22 @@ export function Track({ race }: { race: RaceState }) {
       const my = (ya + yb) / 2
       const n = leftNormal(t.tan[idx])
 
-      // Player lane deck + curbs
       p.set(mx, my - DECK_H / 2, mz)
       s.set(t.half * 2 + 0.6, DECK_H, len + 0.4)
       m.compose(p, q, s)
       pDeck.current?.setMatrixAt(count, m)
       placeRail(pRail.current, count * 2, mx, my, mz, n, t.half, yaw, len, scratch)
       placeRail(pRail.current, count * 2 + 1, mx, my, mz, n, -t.half, yaw, len, scratch)
-
-      // Bot lane (race only)
-      if (race.bot) {
-        const bx = mx + n.x * LANE_GAP
-        const bz = mz + n.z * LANE_GAP
-        p.set(bx, my - DECK_H / 2, bz)
-        s.set(t.half * 2 + 0.6, DECK_H, len + 0.4)
-        m.compose(p, q, s)
-        bDeck.current?.setMatrixAt(count, m)
-        placeRail(bRail.current, count * 2, bx, my, bz, n, t.half, yaw, len, scratch)
-        placeRail(bRail.current, count * 2 + 1, bx, my, bz, n, -t.half, yaw, len, scratch)
-      }
       count++
     }
     finish(pDeck.current, count)
     finish(pRail.current, count * 2)
-    if (race.bot) {
-      finish(bDeck.current, count)
-      finish(bRail.current, count * 2)
-    }
 
-    // --- Ramp wedges (player lane + bot lane), gated to the visible window ---
-    const arcLo = t.closed ? -Infinity : t.cum[clampIdx(t, lo)] ?? 0
-    const arcHi = t.closed ? Infinity : t.cum[clampIdx(t, hi)] ?? t.length
+    // --- Ramp wedges ---
     let r = 0
     for (const ramp of t.ramps) {
-      if (ramp.s0 + ramp.len < arcLo || ramp.s0 > arcHi) continue
-      if (r >= RAMP_CAP - 1) break
-      placeRamp(ramps.current, r++, t, ramp, 0, scratch)
-      if (race.bot && r < RAMP_CAP) placeRamp(ramps.current, r++, t, ramp, LANE_GAP, scratch)
+      if (r >= RAMP_CAP) break
+      placeRamp(ramps.current, r++, t, ramp, scratch)
     }
     finish(ramps.current, r)
 
@@ -132,21 +103,10 @@ export function Track({ race }: { race: RaceState }) {
   }
 
   useFrame(() => {
-    const t = race.track
-    let lo: number
-    let hi: number
-    if (t.closed) {
-      lo = 0
-      hi = t.pts.length - 1
-    } else {
-      lo = Math.max(0, race.player.index - 30)
-      hi = race.player.index + 110
-    }
-    if (lo === lastWin.current.lo && hi === lastWin.current.hi) return
-    // For endless, only rebuild after the window shifts a chunk (perf).
-    if (!t.closed && Math.abs(lo - lastWin.current.lo) < 6 && lastWin.current.lo >= 0) return
-    lastWin.current = { lo, hi }
-    fill(lo, hi)
+    // The whole circuit is static — build once when the meshes are ready.
+    if (built.current || !pDeck.current) return
+    built.current = true
+    fill()
   })
 
   return (
@@ -167,18 +127,6 @@ export function Track({ race }: { race: RaceState }) {
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color={OBST_COLOR} roughness={0.5} emissive={OBST_COLOR} emissiveIntensity={0.25} />
       </instancedMesh>
-      {race.bot && (
-        <>
-          <instancedMesh ref={bDeck} args={[undefined, undefined, CAP]} receiveShadow frustumCulled={false}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color={DECK_COLOR} roughness={0.85} />
-          </instancedMesh>
-          <instancedMesh ref={bRail} args={[undefined, undefined, CAP * 2]} castShadow frustumCulled={false}>
-            <boxGeometry args={[RAIL_W, RAIL_H, 1]} />
-            <meshStandardMaterial color={RAIL_B} roughness={0.5} emissive={RAIL_B} emissiveIntensity={0.25} />
-          </instancedMesh>
-        </>
-      )}
     </>
   )
 }
@@ -190,10 +138,6 @@ type Scratch = {
   e: THREE.Euler
   p: THREE.Vector3
   s: THREE.Vector3
-}
-
-function clampIdx(t: BakedTrack, i: number): number {
-  return Math.max(0, Math.min(t.cum.length - 1, i))
 }
 
 function placeRail(
@@ -223,18 +167,16 @@ function placeRamp(
   slot: number,
   t: BakedTrack,
   ramp: BakedRamp,
-  laneOff: number,
   sc: Scratch,
 ) {
   if (!mesh) return
   const { m, q, q2, p, s } = sc
   const a = sampleAt(t, ramp.s0)
   const b = sampleAt(t, ramp.s0 + ramp.len)
-  const n = leftNormal(a.tan)
-  const ax = a.pos.x + n.x * laneOff
-  const az = a.pos.z + n.z * laneOff
-  const bx = b.pos.x + n.x * laneOff
-  const bz = b.pos.z + n.z * laneOff
+  const ax = a.pos.x
+  const az = a.pos.z
+  const bx = b.pos.x
+  const bz = b.pos.z
   const horiz = Math.hypot(bx - ax, bz - az) || 1
   const yaw = Math.atan2(bx - ax, bz - az)
   const pitch = Math.atan2(ramp.height, horiz)

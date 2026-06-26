@@ -27,7 +27,7 @@ import { RaceScene } from '@/game/race/RaceScene'
 export function Game() {
   const character = useGameStore((s) => s.selectedCharacter)
   const mode = useGameStore((s) => s.mode)
-  const isRace = mode === 'race' || mode === 'endless'
+  const isRace = mode === 'race'
   const shadowsSetting = useSettingsStore((s) => s.shadows)
   const graphics = useSettingsStore((s) => s.graphics)
   const batterySaver = useSettingsStore((s) => s.batterySaver)

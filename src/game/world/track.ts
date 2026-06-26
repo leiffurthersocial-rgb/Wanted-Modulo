@@ -50,11 +50,10 @@ export interface BakedTrack {
   y: number[]
   /** Cumulative arc length at each point. */
   cum: number[]
-  /** Total centreline length (one lap, for closed tracks). */
+  /** Total centreline length (one lap). */
   length: number
   closed: boolean
   half: number
-  endless: boolean
   /** Scenery theme id used by the race Scenery decorator. */
   theme: string
   /** Launch ramps along the centreline. */
@@ -63,8 +62,6 @@ export interface BakedTrack {
   gaps: BakedGap[]
   /** Static barriers on the deck to dodge. */
   obstacles: BakedObstacle[]
-  /** Lazily extend an endless track so it covers world index `to`. */
-  extend?: (to: number) => void
 }
 
 export interface TrackDef {
@@ -123,7 +120,7 @@ function bake(def: TrackDef, closed: boolean): BakedTrack {
     raw.push(control[n - 1])
     rawY.push(elev[n - 1])
   }
-  const baked = finalize(def.id, def.name, raw, rawY, closed, def.half, false)
+  const baked = finalize(def.id, def.name, raw, rawY, closed, def.half)
   baked.theme = def.theme ?? 'none'
   // Bake ramps from lap-fraction positions once the length is known.
   if (def.ramps) {
@@ -162,7 +159,6 @@ function finalize(
   y: number[],
   closed: boolean,
   half: number,
-  endless: boolean,
 ): BakedTrack {
   const tan: Vec2[] = []
   const cum: number[] = [0]
@@ -180,7 +176,7 @@ function finalize(
   const length = closed
     ? cum[cum.length - 1] + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z)
     : cum[cum.length - 1]
-  return { id, name, pts, tan, y, cum, length, closed, half, endless, theme: 'none', ramps: [], gaps: [], obstacles: [] }
+  return { id, name, pts, tan, y, cum, length, closed, half, theme: 'none', ramps: [], gaps: [], obstacles: [] }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -301,11 +297,30 @@ export function project(
 
 export const TRACK_DEFS: TrackDef[] = [
   {
+    id: 'harbor-cruise',
+    theme: 'flag',
+    name: 'Harbor Cruise',
+    blurb: 'Wide, gentle and forgiving — rolling bends and one easy crest jump. The perfect first lap.',
+    half: 7.2,
+    control: [
+      { x: 0, z: 130 }, { x: 85, z: 118 }, { x: 130, z: 45 }, { x: 115, z: -45 },
+      { x: 45, z: -120 }, { x: -45, z: -122 }, { x: -120, z: -48 }, { x: -120, z: 45 },
+      { x: -65, z: 110 },
+    ],
+    elev: [0, 3, 5, 3, 1, 2, 4, 3, 1],
+    ramps: [{ at: 0.5, height: 2.6, len: 15 }],
+    obstacles: [
+      { at: 0.22, lateral: -0.4 },
+      { at: 0.55, lateral: 0.4 },
+      { at: 0.82, lateral: -0.4 },
+    ],
+  },
+  {
     id: 'sunset-oval',
     theme: 'palm',
     name: 'Sunset Oval',
-    blurb: 'Fast, flowing sweepers with twin crest jumps and a few chicanes — a lively opener.',
-    half: 6.2,
+    blurb: 'Fast, flowing sweepers with twin gap jumps and chicanes — a lively warm-up.',
+    half: 5.6,
     control: [
       { x: 0, z: 120 }, { x: 95, z: 105 }, { x: 140, z: 0 }, { x: 95, z: -105 },
       { x: 0, z: -130 }, { x: -95, z: -105 }, { x: -140, z: 0 }, { x: -95, z: 105 },
@@ -327,7 +342,7 @@ export const TRACK_DEFS: TrackDef[] = [
     theme: 'pine',
     name: 'Switchback Ridge',
     blurb: 'Tight esses up a climbing ridge — a barrier slalom and three crest jumps.',
-    half: 5.0,
+    half: 4.8,
     control: [
       { x: 0, z: 150 }, { x: 85, z: 135 }, { x: 50, z: 70 }, { x: 120, z: 35 },
       { x: 100, z: -50 }, { x: 18, z: -68 }, { x: 50, z: -150 }, { x: -50, z: -145 },
@@ -354,7 +369,7 @@ export const TRACK_DEFS: TrackDef[] = [
     theme: 'flag',
     name: 'Grand Loop',
     blurb: 'Long, high-speed track — rolling hills, three big gap jumps and staggered chicanes.',
-    half: 6.4,
+    half: 5.8,
     control: [
       { x: 0, z: 200 }, { x: 135, z: 170 }, { x: 200, z: 50 }, { x: 160, z: -95 },
       { x: 70, z: -145 }, { x: 100, z: -220 }, { x: -50, z: -200 }, { x: -150, z: -120 },
@@ -380,7 +395,7 @@ export const TRACK_DEFS: TrackDef[] = [
     theme: 'canyon',
     name: 'Canyon Rush',
     blurb: 'Plunging dips and steep climbs — three ramp gaps soaring over the ravine.',
-    half: 5.4,
+    half: 5.0,
     control: [
       { x: 0, z: 160 }, { x: 110, z: 150 }, { x: 175, z: 70 }, { x: 150, z: -40 },
       { x: 200, z: -130 }, { x: 90, z: -190 }, { x: -40, z: -160 }, { x: -30, z: -60 },
@@ -406,7 +421,7 @@ export const TRACK_DEFS: TrackDef[] = [
     theme: 'neon',
     name: 'Skyline Weave',
     blurb: 'A weaving neon circuit that climbs through four ramp jumps and a tight slalom.',
-    half: 5.4,
+    half: 5.0,
     control: [
       { x: 0, z: 170 }, { x: 90, z: 150 }, { x: 60, z: 60 }, { x: 150, z: 20 },
       { x: 170, z: -80 }, { x: 60, z: -120 }, { x: 80, z: -200 }, { x: -70, z: -185 },
@@ -433,7 +448,7 @@ export const TRACK_DEFS: TrackDef[] = [
     theme: 'palm',
     name: 'Riptide Coast',
     blurb: 'Sweeping coastal esses with staggered chicanes and four gap jumps along the cliffs.',
-    half: 5.8,
+    half: 5.2,
     control: [
       { x: 0, z: 185 }, { x: 100, z: 175 }, { x: 150, z: 110 }, { x: 110, z: 40 },
       { x: 165, z: -25 }, { x: 140, z: -110 }, { x: 40, z: -150 }, { x: 70, z: -215 },
@@ -494,31 +509,63 @@ export const TRACK_DEFS: TrackDef[] = [
     id: 'impossible',
     theme: 'crystal',
     name: 'Vertigo',
-    blurb: 'Brutal but beatable — long gap jumps, a barrier slalom and big elevation. The ultimate test.',
-    half: 4.4,
+    blurb: 'Brutal but beatable — long gap jumps, a barrier slalom and big elevation.',
+    half: 4.2,
     control: [
       { x: 0, z: 160 }, { x: 75, z: 150 }, { x: 125, z: 110 }, { x: 150, z: 45 },
       { x: 150, z: -35 }, { x: 120, z: -105 }, { x: 60, z: -145 }, { x: 95, z: -200 },
       { x: 0, z: -215 }, { x: -80, z: -180 }, { x: -55, z: -100 }, { x: -120, z: -80 },
       { x: -160, z: -10 }, { x: -160, z: 80 }, { x: -95, z: 140 }, { x: -25, z: 135 },
     ],
-    elev: [0, 4, 8, 12, 8, 3, 6, 11, 5, 0, 6, 10, 6, 2, 8, 4],
+    elev: [0, 5, 10, 15, 9, 3, 7, 13, 6, 0, 7, 12, 7, 2, 10, 4],
     // Ramps sit on the straighter runs (with clear landings) so the gaps are
     // jumpable if you carry speed — no barriers crowding the approaches.
     ramps: [
-      { at: 0.22, height: 4.2, len: 13, gap: 5 },
-      { at: 0.47, height: 4.6, len: 13, gap: 6 },
-      { at: 0.78, height: 4.4, len: 12, gap: 5 },
+      { at: 0.22, height: 4.4, len: 13, gap: 6 },
+      { at: 0.47, height: 4.8, len: 13, gap: 7 },
+      { at: 0.78, height: 4.6, len: 12, gap: 6 },
     ],
     obstacles: [
-      { at: 0.08, lateral: 0.5 },
-      { at: 0.12, lateral: -0.5 },
-      { at: 0.34, lateral: 0.5 },
-      { at: 0.38, lateral: -0.5 },
-      { at: 0.6, lateral: 0.5 },
-      { at: 0.64, lateral: -0.5 },
-      { at: 0.9, lateral: 0.5 },
-      { at: 0.95, lateral: -0.5 },
+      { at: 0.08, lateral: 0.55 },
+      { at: 0.12, lateral: -0.55 },
+      { at: 0.34, lateral: 0.55 },
+      { at: 0.38, lateral: -0.55 },
+      { at: 0.6, lateral: 0.55 },
+      { at: 0.64, lateral: -0.55 },
+      { at: 0.9, lateral: 0.55 },
+      { at: 0.95, lateral: -0.55 },
+    ],
+  },
+  {
+    id: 'oblivion',
+    theme: 'crystal',
+    name: 'Oblivion',
+    blurb: 'The hardest of all — a razor ribbon of blind crests, yawning gaps and a vicious slalom. Almost no one finishes clean.',
+    half: 4.0,
+    control: [
+      { x: 0, z: 150 }, { x: 70, z: 148 }, { x: 110, z: 110 }, { x: 105, z: 55 },
+      { x: 145, z: 12 }, { x: 122, z: -60 }, { x: 152, z: -120 }, { x: 60, z: -150 },
+      { x: 85, z: -212 }, { x: -28, z: -202 }, { x: -18, z: -120 }, { x: -92, z: -110 },
+      { x: -132, z: -42 }, { x: -96, z: 12 }, { x: -152, z: 72 }, { x: -78, z: 132 },
+    ],
+    elev: [0, 6, 13, 7, 15, 6, 2, 10, 17, 8, 2, 11, 16, 6, 13, 4],
+    ramps: [
+      { at: 0.18, height: 4.6, len: 12, gap: 7 },
+      { at: 0.4, height: 5.0, len: 12, gap: 8 },
+      { at: 0.6, height: 4.8, len: 12, gap: 7 },
+      { at: 0.82, height: 4.6, len: 11, gap: 7 },
+    ],
+    obstacles: [
+      { at: 0.07, lateral: 0.6 },
+      { at: 0.1, lateral: -0.6 },
+      { at: 0.28, lateral: 0.6 },
+      { at: 0.31, lateral: -0.55 },
+      { at: 0.48, lateral: 0.6 },
+      { at: 0.51, lateral: -0.6 },
+      { at: 0.68, lateral: 0.55 },
+      { at: 0.71, lateral: -0.6 },
+      { at: 0.9, lateral: 0.55 },
+      { at: 0.93, lateral: -0.55 },
     ],
   },
 ]
@@ -532,89 +579,4 @@ export function getTrack(id: string): BakedTrack {
   const baked = bake(def, true)
   BAKED.set(id, baked)
   return baked
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Endless procedural track                                                   */
-/* -------------------------------------------------------------------------- */
-
-/** Deterministic value-noise-ish curvature so the endless ribbon is repeatable. */
-function curveAt(i: number): number {
-  const a = Math.sin(i * 0.15) * 0.7
-  const b = Math.sin(i * 0.037 + 2.1) * 1.0
-  const c = Math.sin(i * 0.009 + 5.3) * 1.3
-  return (a + b + c) / 3.0 // ~[-1,1]
-}
-
-/** Deterministic, repeatable hill profile for the endless ribbon. */
-function heightAt(i: number): number {
-  const a = Math.sin(i * 0.05) * 4
-  const b = Math.sin(i * 0.017 + 1.3) * 6
-  const c = Math.sin(i * 0.0065 + 4.0) * 5
-  return a + b + c
-}
-
-const ENDLESS_STEP = 6 // world units per generated point
-const ENDLESS_HALF = 5.5
-/** Endless ramps: one roughly every this-many points, scaling with distance. */
-const ENDLESS_RAMP_SPACING = 90
-
-/** Builds the (lazily extending) endless track starting straight ahead. */
-export function makeEndless(): BakedTrack {
-  const pts: Vec2[] = []
-  const tan: Vec2[] = []
-  const y: number[] = []
-  const cum: number[] = []
-  let heading = 0
-  let x = 0
-  let z = 0
-  let total = 0
-  let nextRamp = ENDLESS_RAMP_SPACING
-  const track: BakedTrack = {
-    id: 'endless',
-    name: 'Endless',
-    pts,
-    tan,
-    y,
-    cum,
-    length: 0,
-    closed: false,
-    half: ENDLESS_HALF,
-    endless: true,
-    theme: 'none',
-    ramps: [],
-    gaps: [],
-    obstacles: [],
-    extend: (to: number) => {
-      while (pts.length <= to + 60) {
-        const i = pts.length
-        // Straight launch ramp, then increasingly curvy with distance.
-        const intensity = Math.min(0.22, 0.02 + i * 0.00003)
-        if (i > 6) heading += curveAt(i) * intensity
-        const nx = x + Math.sin(heading) * ENDLESS_STEP
-        const nz = z + Math.cos(heading) * ENDLESS_STEP
-        if (pts.length > 0) total += Math.hypot(nx - x, nz - z)
-        x = nx
-        z = nz
-        pts.push({ x, z })
-        tan.push({ x: Math.sin(heading), z: Math.cos(heading) })
-        // Hills kick in after the start straight, growing a touch with distance.
-        y.push(i > 10 ? heightAt(i) * Math.min(1, 0.4 + i * 0.0004) : 0)
-        cum.push(total === 0 ? 0 : total)
-        track.length = total
-        // Sprinkle launch ramps once past the start straight.
-        if (i > 30 && i >= nextRamp) {
-          track.ramps.push({ s0: total, len: 12, height: 3 + Math.min(3, i * 0.0008) })
-          nextRamp = i + ENDLESS_RAMP_SPACING
-        }
-      }
-    },
-  }
-  // Seed the first point + an initial run.
-  pts.push({ x: 0, z: 0 })
-  tan.push({ x: 0, z: 1 })
-  y.push(0)
-  cum.push(0)
-  track.extend!(200)
-  return track
 }

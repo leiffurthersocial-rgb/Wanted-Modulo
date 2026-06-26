@@ -12,7 +12,7 @@ export type GamePhase =
   | 'gameover'
 
 /** Which game mode a run uses. */
-export type GameMode = 'survive' | 'pursuit' | 'race' | 'endless'
+export type GameMode = 'survive' | 'race'
 
 /** Logical input actions, decoupled from physical keys (see InputManager). */
 export type InputAction =
@@ -119,55 +119,23 @@ export interface RunStats {
   cloak: number
   /** Which mode this run is. */
   mode: GameMode
-  /** Cop-chase stats (present only in pursuit mode). */
-  chase: ChaseStats | null
-  /** Race / endless stats (present only in those modes). */
+  /** Race stats (present only in race mode). */
   race: RaceStats | null
 }
 
-/** Live HUD stats for Race + Endless modes. */
+/** Live HUD stats for Race mode (solo single-lap time trial). */
 export interface RaceStats {
-  /** True for the solo endless mode (false for head-to-head race). */
-  endless: boolean
   /** Start countdown (seconds, 3..0); 0 once racing. */
   countdown: number
   /** Elapsed race time (seconds). */
   time: number
-  /** Current lap (1-based) and total laps (race only). */
-  lap: number
-  totalLaps: number
-  /** Player position: 1 = leading, 2 = behind (race only). */
-  position: number
-  /** Player + bot progress along the whole race (0..1, race only). */
-  playerProgress: number
-  botProgress: number
-  /** Distance travelled (metres) — the endless score. */
-  distance: number
   /** Current speed readout. */
   speed: number
-  /** Best time (ms, race) or best distance (m, endless) for this track. */
+  /** Best lap time (ms) for this track. */
   best: number
   /** Brief "recovering after a fall" timer (s). */
   recover: number
   /** Run finished + outcome. */
   finished: boolean
   won: boolean
-  /** Fell off the track (endless game-over). */
-  fell: boolean
-}
-
-/** Live HUD stats for the cop-chase (pursuit) mode. */
-export interface ChaseStats {
-  /** Suspects busted so far this run. */
-  caught: number
-  /** Bust progress on the current suspect (0..1). */
-  bust: number
-  /** Distance (world units) to the current suspect. */
-  suspectDist: number
-  /** Bearing to the suspect relative to the camera/heading (radians). */
-  suspectAngle: number
-  /** Escape warning 0..1 — suspect is slipping away. */
-  escapeWarn: number
-  /** "CAUGHT!" banner flash timer (s). */
-  banner: number
 }

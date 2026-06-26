@@ -25,7 +25,6 @@ const emptyStats = (mode: GameMode = 'survive'): RunStats => ({
   shield: 0,
   cloak: 0,
   mode,
-  chase: null,
   race: null,
 })
 
@@ -64,8 +63,8 @@ interface GameStore {
   selectCharacter: (id: CharacterId) => void
   setMode: (mode: GameMode) => void
   setRaceTrack: (id: string) => void
-  /** Best lap time (ms, race) or distance (m, endless) for the given track. */
-  raceBestFor: (trackId: string, endless: boolean) => number
+  /** Best lap time (ms) for the given race track. */
+  raceBestFor: (trackId: string) => number
   startRun: () => void
   pause: () => void
   resume: () => void
@@ -92,10 +91,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectCharacter: (id) => set({ selectedCharacter: id }),
   setMode: (mode) => set({ mode }),
   setRaceTrack: (id) => set({ raceTrackId: id }),
-  raceBestFor: (trackId, endless) =>
-    endless
-      ? useProgressionStore.getState().endlessBest
-      : useProgressionStore.getState().raceBest[trackId] ?? 0,
+  raceBestFor: (trackId) => useProgressionStore.getState().raceBest[trackId] ?? 0,
 
   startRun: () =>
     set((s) => ({ phase: 'playing', stats: emptyStats(s.mode), cheated: false, runId: s.runId + 1 })),
@@ -116,26 +112,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   endRun: () => {
     const cur = get().stats
-    if (cur.mode === 'race' || cur.mode === 'endless') {
+    if (cur.mode === 'race') {
       const r = cur.race
-      if (r && !get().cheated) {
-        if (cur.mode === 'endless') {
-          useProgressionStore.getState().recordEndless(Math.round(r.distance))
-        } else if (r.won) {
-          useProgressionStore.getState().recordRace(get().raceTrackId, Math.round(r.time * 1000))
-        }
+      if (r && r.won && !get().cheated) {
+        useProgressionStore.getState().recordRace(get().raceTrackId, Math.round(r.time * 1000))
       }
       set({ phase: 'gameover', stats: cur })
-      return
-    }
-    if (cur.mode === 'pursuit') {
-      // Cop-chase: score is finalised live (per catch). Record to the separate
-      // pursuit best so it never mixes with the survive personal best.
-      const stats = { ...cur }
-      if (!get().cheated) {
-        useProgressionStore.getState().recordChase(stats.chase?.caught ?? 0, stats.score)
-      }
-      set({ phase: 'gameover', stats })
       return
     }
     // Survive: score is accumulated live; finalise with the peak-heat bonus.

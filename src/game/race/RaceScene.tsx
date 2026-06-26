@@ -17,12 +17,11 @@ const CAM = { distance: 14, height: 8, lerp: 6, lookLerp: 9 }
 
 export function RaceScene() {
   const { camera } = useThree()
-  const mode = useGameStore((s) => s.mode)
   const trackId = useGameStore((s) => s.raceTrackId)
-  const best = useGameStore((s) => s.raceBestFor(trackId, mode === 'endless'))
+  const best = useGameStore((s) => s.raceBestFor(trackId))
 
   const race = useMemo(
-    () => createRaceState(mode, trackId, best),
+    () => createRaceState(trackId, best),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
@@ -34,9 +33,8 @@ export function RaceScene() {
   const statTimer = useRef(1) // publish on the first frame
   const ended = useRef(false)
 
-  // Finish gate (closed circuits): posts + bar across the start line.
+  // Finish gate: posts + bar across the start line.
   const gate = useMemo(() => {
-    if (race.endless) return null
     const sp = sampleAt(race.track, 0)
     const n = leftNormal(sp.tan)
     const yaw = Math.atan2(sp.tan.x, sp.tan.z)
@@ -61,10 +59,10 @@ export function RaceScene() {
       return
     }
 
-    // Debug: instantly finish the current lap (Race only).
+    // Debug: instantly finish the current lap.
     if (debug.enabled && debug.raceFinishPing > finishPing.current) {
       finishPing.current = debug.raceFinishPing
-      if (!race.endless && !race.finished) {
+      if (!race.finished) {
         race.finished = true
         race.won = true
       }
@@ -105,7 +103,7 @@ export function RaceScene() {
     camera.lookAt(lookTarget.current)
 
     // Sun/shadows track the player.
-    store.setRadar({ px: p.pos.x, pz: p.pos.z, heading: p.state.heading, units: [], helis: [], suspect: null })
+    store.setRadar({ px: p.pos.x, pz: p.pos.z, heading: p.state.heading, units: [], helis: [] })
 
     statTimer.current += dt
     if (statTimer.current >= SIM.statPublishInterval || race.finished) {
@@ -155,35 +153,19 @@ export function RaceScene() {
 }
 
 function publish(race: ReturnType<typeof createRaceState>): void {
-  const p = race.player
-  const total = race.totalDist || 1
-  const playerProgress = race.endless ? 0 : Math.max(0, Math.min(1, p.traveled / total))
-  const botProgress = 0
-  const lap = race.endless ? 0 : 1
-  const position = 1
-  const distance = Math.max(0, p.traveled)
-  const speed = Math.abs(p.state.speed)
-
+  const speed = Math.abs(race.player.state.speed)
   useGameStore.getState().publishStats({
-    mode: race.mode,
+    mode: 'race',
     speed,
-    score: race.endless ? Math.round(distance) : 0,
+    score: 0,
     race: {
-      endless: race.endless,
       countdown: race.countdown,
       time: race.elapsed,
-      lap,
-      totalLaps: race.totalLaps,
-      position,
-      playerProgress,
-      botProgress,
-      distance,
       speed,
       best: race.best,
       recover: race.recover,
       finished: race.finished,
       won: race.won,
-      fell: race.fell,
     },
   })
 }

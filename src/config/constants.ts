@@ -114,10 +114,10 @@ export const POLICE = {
   despawnRadius: 170,
   /** Seconds between spawn attempts when below the heat target (low = sooner). */
   spawnInterval: 0.55,
-  /** Half-angle (radians) of the dead-ahead cone kept clear of spawns. Small,
-   *  so police CAN appear ahead (left/right of your path, at full spawn range —
-   *  enough room to swerve) but never materialise directly in front of you. */
-  frontClearCone: 0.5,
+  /** Half-angle (radians) of the dead-ahead cone kept clear of spawns. ~0 means
+   *  police can spawn all around you — including ahead — so escaping early takes
+   *  real driving; they still appear at the full spawn radius (room to react). */
+  frontClearCone: 0.0,
   /** Steering gain converting heading error -> steer input. */
   steerGain: 2.4,
   /** Lead time (s) for predicting the player's future position. */

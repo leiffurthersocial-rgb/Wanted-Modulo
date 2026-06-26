@@ -8,18 +8,11 @@ interface ProgressionStore {
   totalRuns: number
   totalTime: number
   peakHeatEver: number
-  /** Cop-chase mode: most suspects caught in a run, and best chase score. */
-  bestCaught: number
-  bestChaseScore: number
   /** Race mode: best single-lap time (ms) per track id. */
   raceBest: Record<string, number>
-  /** Endless mode: furthest distance (m). */
-  endlessBest: number
 
   recordRun: (stats: RunStats) => void
-  recordChase: (caught: number, score: number) => void
   recordRace: (trackId: string, timeMs: number) => void
-  recordEndless: (distance: number) => void
   reset: () => void
 }
 
@@ -36,10 +29,7 @@ export const useProgressionStore = create<ProgressionStore>()(
       totalRuns: 0,
       totalTime: 0,
       peakHeatEver: 0,
-      bestCaught: 0,
-      bestChaseScore: 0,
       raceBest: {},
-      endlessBest: 0,
 
       recordRun: (stats) =>
         set((s) => ({
@@ -50,21 +40,12 @@ export const useProgressionStore = create<ProgressionStore>()(
           peakHeatEver: Math.max(s.peakHeatEver, stats.peakHeat),
         })),
 
-      recordChase: (caught, score) =>
-        set((s) => ({
-          bestCaught: Math.max(s.bestCaught, caught),
-          bestChaseScore: Math.max(s.bestChaseScore, score),
-        })),
-
       recordRace: (trackId, timeMs) =>
         set((s) => {
           const prev = s.raceBest[trackId]
           if (prev !== undefined && prev <= timeMs) return s
           return { raceBest: { ...s.raceBest, [trackId]: timeMs } }
         }),
-
-      recordEndless: (distance) =>
-        set((s) => ({ endlessBest: Math.max(s.endlessBest, distance) })),
 
       reset: () =>
         set({
@@ -73,10 +54,7 @@ export const useProgressionStore = create<ProgressionStore>()(
           totalRuns: 0,
           totalTime: 0,
           peakHeatEver: 0,
-          bestCaught: 0,
-          bestChaseScore: 0,
           raceBest: {},
-          endlessBest: 0,
         }),
     }),
     { name: 'wanted-modulo:progression' },

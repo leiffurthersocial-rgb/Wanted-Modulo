@@ -7,7 +7,6 @@ import type { PropInstance } from '@/game/world/propModel'
 import { ensurePropWindow, getProps } from '@/game/world/propModel'
 import { ensurePowerupWindow, getPowerups, type Powerup, type PowerupType } from '@/game/world/powerupModel'
 import { resetDebugActionPings } from '@/game/sim/systems/powerups'
-import { COP_DEF, createChase } from '@/game/sim/systems/chase'
 import type { PropType } from '@/game/world/propCatalog'
 import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import { MINES, PARTICLES, PLAYER, POLICE } from '@/config/constants'
@@ -105,44 +104,6 @@ export interface Particle {
   color: THREE.Color
 }
 
-/**
- * The fleeing suspect for cop-chase mode. Kept outside the `vehicles` pool so
- * the survive-mode systems (police fleet, recycling) never touch it.
- */
-export interface SuspectEntity {
-  def: VehicleDef
-  pos: THREE.Vector3
-  state: VehicleState
-  y: number
-  vy: number
-  /** Current evasive heading the suspect is steering toward. */
-  fleeHeading: number
-  /** Countdown to the next juke (random direction change). */
-  jukeTimer: number
-  /** Brief panic-boost timer (s) — a cornered suspect's second wind. */
-  boost: number
-  /** Cooldown before the suspect can panic-boost again (s). */
-  boostCooldown: number
-}
-
-/** Cop-chase (pursuit) mode run-state. */
-export interface ChaseSim {
-  suspect: SuspectEntity
-  /** Suspects busted this run. */
-  caught: number
-  /** Bust progress on the current suspect (0..1). */
-  bust: number
-  /** Seconds the suspect has spent beyond the escape distance. */
-  escapeTimer: number
-  /** True once a suspect has fully escaped — ends the run. */
-  escaped: boolean
-  /** "CAUGHT!" banner flash timer (s). */
-  banner: number
-  /** Bearing to the suspect relative to player heading (radians, for the HUD arrow). */
-  bearing: number
-  /** Distance to the suspect (world units). */
-  dist: number
-}
 
 export interface HeatSim {
   /** Continuous 0..10. */
@@ -165,8 +126,6 @@ export interface ScoreSim {
 export interface SimState {
   /** Which mode this run is playing. */
   mode: GameMode
-  /** Cop-chase state (null in survive mode). */
-  chase: ChaseSim | null
   player: PlayerSim
   /** Player velocity (world units/s) — consumed by AI prediction. */
   playerVel: THREE.Vector3
@@ -298,32 +257,13 @@ export function createSimState(mode: GameMode = 'survive'): SimState {
     vy: 0,
   }))
 
-  const pursuit = mode === 'pursuit'
-  // In cop-chase mode the player starts already in a fast police interceptor
-  // (vehicle slot 0 is repurposed as the cruiser; the suspect lives in `chase`).
-  if (pursuit) {
-    vehicles[0] = {
-      def: COP_DEF,
-      pos: new THREE.Vector3(0, 0, 0),
-      state: { heading: 0, speed: 0, slip: 0 },
-      health: COP_DEF.durability,
-      occupied: true,
-      wrecked: false,
-      smokeTimer: 0,
-      squash: 0,
-      y: 0,
-      vy: 0,
-    }
-  }
-
   const state: SimState = {
     mode,
-    chase: pursuit ? createChase(0, 0) : null,
     player: {
       pos: new THREE.Vector3(...PLAYER.spawn),
       heading: 0,
-      mode: pursuit ? 'vehicle' : 'foot',
-      vehicleIndex: pursuit ? 0 : -1,
+      mode: 'foot',
+      vehicleIndex: -1,
       swimming: false,
     },
     playerVel: new THREE.Vector3(),

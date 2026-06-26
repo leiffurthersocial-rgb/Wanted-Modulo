@@ -46,7 +46,7 @@ export function Scenery({ race }: { race: RaceState }) {
   const items = useMemo<Placed[]>(() => {
     const t = race.track
     const kinds = THEMES[t.theme]
-    if (t.endless || !kinds) return []
+    if (!kinds) return []
     const rng = mulberry32(hashId(t.id))
     const out: Placed[] = []
     const STEP = 16

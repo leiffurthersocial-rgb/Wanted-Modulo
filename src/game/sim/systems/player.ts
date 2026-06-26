@@ -157,9 +157,7 @@ export function updatePlayer(state: SimState, input: StepInput, dt: number): voi
       if (depth > 0) {
         v.state.speed *= 1 - Math.min(0.92, depth * 0.6)
         v.state.slip *= 0.5
-        // In cop-chase mode the player is locked into their cruiser (no re-entry),
-        // so deep water just bogs them down instead of ejecting them.
-        if (depth > CAR_DROWN_DEPTH && state.mode !== 'pursuit') {
+        if (depth > CAR_DROWN_DEPTH) {
           ejectPlayer(state, v)
         }
       }

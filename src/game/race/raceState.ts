@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { GameMode, VehicleDef } from '@/types'
+import type { VehicleDef } from '@/types'
 import type { VehicleState } from '@/game/vehicles/vehiclePhysics'
 import { stepVehicle } from '@/game/vehicles/vehiclePhysics'
 import { getDebug } from '@/state/useDebugStore'
@@ -8,13 +8,12 @@ import {
   getTrack,
   groundAt,
   inGap,
-  makeEndless,
   project,
   rampAt,
   sampleAt,
 } from '@/game/world/track'
 
-/** The shared race car (both player and bot). Sporty + grippy for clean racing. */
+/** The race car. Sporty + grippy for clean racing. */
 export const RACE_DEF: VehicleDef = {
   id: 'racer',
   name: 'Racer',
@@ -28,8 +27,6 @@ export const RACE_DEF: VehicleDef = {
   size: { length: 4.0, width: 1.9, height: 1.15 },
 }
 
-/** Kept for the (now unused) parallel-lane offset referenced by the renderer. */
-export const LANE_GAP = 20
 const GRAVITY = 26
 const FALL_DEATH_Y = -22
 const COUNTDOWN = 3
@@ -53,21 +50,15 @@ export interface RaceCar {
 }
 
 export interface RaceState {
-  mode: GameMode
-  endless: boolean
   track: BakedTrack
-  totalLaps: number
   totalDist: number
   player: RaceCar
-  bot: RaceCar | null
   countdown: number
   elapsed: number
   recover: number
   finished: boolean
   won: boolean
-  fell: boolean
   best: number
-  rand: () => number
 }
 
 function makeCar(pos: { x: number; z: number }, heading: number, y: number): RaceCar {
@@ -84,32 +75,23 @@ function makeCar(pos: { x: number; z: number }, heading: number, y: number): Rac
   }
 }
 
-export function createRaceState(mode: GameMode, trackId: string, best: number): RaceState {
-  const endless = mode === 'endless'
-  const track = endless ? makeEndless() : getTrack(trackId)
+export function createRaceState(trackId: string, best: number): RaceState {
+  const track = getTrack(trackId)
   const start = sampleAt(track, 0)
   const heading = Math.atan2(start.tan.x, start.tan.z)
   const player = makeCar(start.pos, heading, start.y)
 
-  // Race is now a solo time trial — a single flying lap, no rival.
-  const totalLaps = endless ? 0 : 1
-
+  // A solo time trial — a single flying lap against the clock.
   return {
-    mode,
-    endless,
     track,
-    totalLaps,
-    totalDist: track.length * totalLaps,
+    totalDist: track.length,
     player,
-    bot: null,
     countdown: COUNTDOWN,
     elapsed: 0,
     recover: 0,
     finished: false,
     won: false,
-    fell: false,
     best,
-    rand: Math.random,
   }
 }
 
@@ -140,7 +122,7 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
 
   const { track, player } = state
 
-  // Debug overrides (apply to Race + Endless when the master switch is on).
+  // Debug overrides (apply to Race when the master switch is on).
   const dbg = getDebug()
   const dOn = dbg.enabled
   const gravity = GRAVITY * (dOn ? dbg.gravityMult : 1)
@@ -154,25 +136,18 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
     player.pos.x += Math.sin(player.state.heading) * player.state.speed * dt * 0.4
     player.pos.z += Math.cos(player.state.heading) * player.state.speed * dt * 0.4
     if (player.y < FALL_DEATH_Y) {
-      if (state.endless) {
-        // Endless: falling off ends the run.
-        state.finished = true
-        state.fell = true
-        state.won = false
-      } else {
-        // Race: get fished out and dropped back on the last good spot, losing
-        // time to a short recovery (instead of an invisible wall).
-        const sp = sampleAt(track, player.lastS)
-        player.pos.set(sp.pos.x, 0, sp.pos.z)
-        player.y = sp.y
-        player.vy = 0
-        player.state.heading = Math.atan2(sp.tan.x, sp.tan.z)
-        player.state.speed = 0
-        player.state.slip = 0
-        player.falling = false
-        player.airborne = false
-        state.recover = 1.3
-      }
+      // Get fished out and dropped back on the last good spot, losing time to a
+      // short recovery (instead of an invisible wall).
+      const sp = sampleAt(track, player.lastS)
+      player.pos.set(sp.pos.x, 0, sp.pos.z)
+      player.y = sp.y
+      player.vy = 0
+      player.state.heading = Math.atan2(sp.tan.x, sp.tan.z)
+      player.state.speed = 0
+      player.state.slip = 0
+      player.falling = false
+      player.airborne = false
+      state.recover = 1.3
     }
   } else if (state.recover > 0) {
     state.recover = Math.max(0, state.recover - dt)
@@ -180,12 +155,10 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
     player.state.slip = 0
   } else {
     const prevS = player.lastS
-    const speedMult =
-      (state.endless ? 1 + Math.min(1.1, player.traveled / 2000) : 1) * (dOn ? dbg.speedMult : 1)
-    const throttle = state.endless ? 1 : input.throttle
+    const speedMult = dOn ? dbg.speedMult : 1
     const { dx, dz } = stepVehicle(
       player.state,
-      { throttle, steer: input.steer, handbrake: input.handbrake },
+      { throttle: input.throttle, steer: input.steer, handbrake: input.handbrake },
       RACE_DEF,
       dt,
       speedMult,
@@ -197,9 +170,6 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
     player.index = proj.index
     player.traveled += progressDelta(track, player.lastS, proj.s)
     player.lastS = proj.s
-
-    // Keep the endless ribbon generated ahead of the car.
-    if (track.endless && track.extend) track.extend(proj.index + 150)
 
     const ground = groundAt(track, proj.s)
 
@@ -222,8 +192,7 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
     } else {
       const offEdge = Math.abs(proj.lateral) - track.half - CAR_HALF
       if (offEdge > 0 && !noFall) {
-        // Drove off the edge — fall (no invisible walls). Endless dies; race
-        // recovers once it has dropped far enough.
+        // Drove off the edge — fall (no invisible walls); respawn after dropping.
         player.falling = true
         player.vy = -1
       } else {
@@ -271,7 +240,7 @@ export function stepRace(state: RaceState, input: RaceInput, dt: number): void {
   }
 
   // --- Finish (solo time trial) ---
-  if (!state.endless && !state.finished && player.traveled >= state.totalDist) {
+  if (!state.finished && player.traveled >= state.totalDist) {
     state.finished = true
     state.won = true
   }

@@ -15,15 +15,10 @@ import { VEHICLE_SPAWNS } from '@/game/vehicles/vehicleSpawns'
 import type { PoliceClassId } from '@/game/vehicles/policeCatalog'
 import { VoxelCharacter } from '@/game/models/VoxelCharacter'
 import { VoxelVehicle } from '@/game/models/VoxelVehicle'
-import { VoxelPoliceCar } from '@/game/models/VoxelPoliceCar'
 import { Registry } from '@/game/sim/registry'
 import { createSimState } from '@/game/sim/state'
-import { ESCAPE_LIMIT, SUSPECT_DEF } from '@/game/sim/systems/chase'
 import { stepSim } from '@/game/sim/step'
 import { getDebug } from '@/state/useDebugStore'
-
-/** Reserved police-pool slot used to flash the player's cruiser lightbar in chase mode. */
-const COP_LIGHT_SLOT = POLICE.maxUnits
 
 // Shared scratch objects (single-threaded — safe to reuse).
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0)
@@ -35,12 +30,9 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const { camera } = useThree()
   const setPoliceClasses = useFleetStore((s) => s.setPoliceClasses)
   const mode = useGameStore((s) => s.mode)
-  const pursuit = mode === 'pursuit'
 
   const playerRef = useRef<THREE.Group>(null)
   const vehicleRefs = useRef<(THREE.Group | null)[]>([])
-  const copRef = useRef<THREE.Group>(null)
-  const suspectRef = useRef<THREE.Group>(null)
   const lookTarget = useRef(new THREE.Vector3())
   const peakHeat = useRef(0)
   const prevHeat = useRef(0)
@@ -58,7 +50,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
   const [vehicleDefs, setVehicleDefs] = useState(() => sim.vehicles.map((v) => v.def))
   const prevVehicleDefs = useRef(sim.vehicles.map((v) => v.def))
 
-  useFrame((frameState, delta) => {
+  useFrame((_frameState, delta) => {
     const debug = getDebug()
     const scale = debug.enabled ? debug.timeScale : 1
     const dt = Math.min(delta * scale, SIM.maxDt)
@@ -84,7 +76,6 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
 
     // --- Advance the simulation ---
     const snap = Input.snapshot()
-    // In cop-chase you're locked into the cruiser, so swallow the enter/exit key.
     const interact = Input.consumePressed('interact')
     stepSim(
       sim,
@@ -94,7 +85,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
         left: snap.left,
         right: snap.right,
         handbrake: Input.isDown('handbrake'),
-        interactPressed: sim.mode === 'pursuit' ? false : interact,
+        interactPressed: interact,
         lookYaw: inVehicleNow ? 0 : look.yaw,
       },
       dt,
@@ -161,12 +152,6 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     for (let i = 0; i < sim.vehicles.length; i++) {
       const g = vehicleRefs.current[i]
       if (!g) continue
-      // In chase mode slot 0 is the player's cruiser, drawn by a dedicated cop
-      // model — hide the civilian body that would otherwise overlap it.
-      if (pursuit && i === 0) {
-        g.visible = false
-        continue
-      }
       const v = sim.vehicles[i]
       // Gravity-driven height + drift yaw + airborne nose pitch.
       const driftYaw = Math.atan2(v.state.slip, Math.abs(v.state.speed) + 4) * 0.6
@@ -175,28 +160,6 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
       g.rotation.x = THREE.MathUtils.clamp(-v.vy * 0.03, -0.35, 0.35)
       const sq = v.squash
       g.scale.set(1 + sq * 0.4, 1 - sq * 0.6, 1 + sq * 0.4)
-    }
-
-    // --- Chase mode: commit the player cruiser + the fleeing suspect ---
-    if (pursuit && sim.chase) {
-      const v = sim.vehicles[0]
-      if (copRef.current) {
-        const driftYaw = Math.atan2(v.state.slip, Math.abs(v.state.speed) + 4) * 0.6
-        copRef.current.position.set(v.pos.x, v.y, v.pos.z)
-        copRef.current.rotation.y = v.state.heading + driftYaw
-      }
-      const s = sim.chase.suspect
-      if (suspectRef.current) {
-        const sDrift = Math.atan2(s.state.slip, Math.abs(s.state.speed) + 4) * 0.6
-        suspectRef.current.position.set(s.pos.x, s.y, s.pos.z)
-        suspectRef.current.rotation.y = s.state.heading + sDrift
-      }
-      // Flash the cruiser lightbar (reuses the police lightbar materials).
-      const on = Math.sin(frameState.clock.elapsedTime * 14) > 0
-      const ll = Registry.policeLightL[COP_LIGHT_SLOT]
-      const rl = Registry.policeLightR[COP_LIGHT_SLOT]
-      if (ll) ll.emissiveIntensity = on ? 1.9 : 0.15
-      if (rl) rl.emissiveIntensity = on ? 0.15 : 1.9
     }
 
     // --- Commit police pool ---
@@ -315,7 +278,7 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
     if (vehChanged) setVehicleDefs(prevVehicleDefs.current.slice())
 
     // --- End-of-run checks ---
-    if (sim.busted || (sim.chase?.escaped ?? false)) {
+    if (sim.busted) {
       publishStats(sim, peakHeat)
       Audio.cue('bust')
       store.endRun()
@@ -377,17 +340,6 @@ export function Simulation({ characterId }: { characterId: CharacterId }) {
           <VoxelVehicle def={vehicleDefs[i] ?? spawn.def} />
         </group>
       ))}
-
-      {pursuit && (
-        <>
-          <group ref={copRef}>
-            <VoxelPoliceCar classId="interceptor" slot={COP_LIGHT_SLOT} />
-          </group>
-          <group ref={suspectRef}>
-            <VoxelVehicle def={SUSPECT_DEF} />
-          </group>
-        </>
-      )}
     </group>
   )
 }
@@ -416,29 +368,16 @@ function publishStats(
   }
   const helis: { x: number; z: number }[] = []
   for (const h of sim.helis) if (h.active) helis.push({ x: h.pos.x, z: h.pos.z })
-  const suspect = sim.chase ? { x: sim.chase.suspect.pos.x, z: sim.chase.suspect.pos.z } : null
   useGameStore.getState().setRadar({
     px: sim.player.pos.x,
     pz: sim.player.pos.z,
     heading: sim.player.heading,
     units,
     helis,
-    suspect,
   })
 
   const inVehicle = sim.player.mode === 'vehicle'
   const v = inVehicle ? sim.vehicles[sim.player.vehicleIndex] : null
-
-  const chase = sim.chase
-    ? {
-        caught: sim.chase.caught,
-        bust: sim.chase.bust,
-        suspectDist: sim.chase.dist,
-        suspectAngle: sim.chase.bearing,
-        escapeWarn: Math.min(1, sim.chase.escapeTimer / ESCAPE_LIMIT),
-        banner: sim.chase.banner,
-      }
-    : null
 
   useGameStore.getState().publishStats({
     time: sim.acc.time,
@@ -461,6 +400,5 @@ function publishStats(
     shield: sim.power.shield,
     cloak: sim.power.cloak,
     mode: sim.mode,
-    chase,
   })
 }

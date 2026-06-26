@@ -1,7 +1,7 @@
 import { useGameStore } from '@/state/useGameStore'
 import { useSettingsStore } from '@/state/useSettingsStore'
 import { HEAT_TABLE, MAX_HEAT } from '@/game/sim/heatTable'
-import type { ChaseStats, RaceStats } from '@/types'
+import type { RaceStats } from '@/types'
 import { Minimap } from './Minimap'
 
 function fmtRaceTime(t: number): string {
@@ -10,7 +10,7 @@ function fmtRaceTime(t: number): string {
   return `${m}:${s.padStart(4, '0')}`
 }
 
-/** HUD for Race + Endless modes. */
+/** Center HUD for Race mode. */
 function RaceHud({ race }: { race: RaceStats }) {
   if (race.countdown > 0) {
     const n = Math.ceil(race.countdown)
@@ -23,33 +23,18 @@ function RaceHud({ race }: { race: RaceStats }) {
   )
 }
 
-/** Top stat row for Race + Endless modes. */
+/** Top stat row for Race mode. */
 function RaceTop({ race }: { race: RaceStats }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      {race.endless ? (
-        <>
-          <div className="hud-stat">
-            <div className="label">Distance</div>
-            <div className="value">{Math.round(race.distance)}m</div>
-          </div>
-          <div className="hud-stat">
-            <div className="label">Best</div>
-            <div className="value">{Math.round(race.best)}m</div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="hud-stat">
-            <div className="label">Time</div>
-            <div className="value">{fmtRaceTime(race.time)}</div>
-          </div>
-          <div className="hud-stat">
-            <div className="label">Best Lap</div>
-            <div className="value">{race.best > 0 ? fmtRaceTime(race.best / 1000) : '—'}</div>
-          </div>
-        </>
-      )}
+      <div className="hud-stat">
+        <div className="label">Time</div>
+        <div className="value">{fmtRaceTime(race.time)}</div>
+      </div>
+      <div className="hud-stat">
+        <div className="label">Best Lap</div>
+        <div className="value">{race.best > 0 ? fmtRaceTime(race.best / 1000) : '—'}</div>
+      </div>
       <div className="hud-stat">
         <div className="label">Speed</div>
         <div className="value">{Math.round(race.speed * 7)}</div>
@@ -124,43 +109,13 @@ function StatusBanner({ status, policeCount }: { status: string; policeCount: nu
   )
 }
 
-/** Seconds a fleeing suspect can stay clear before they escape (mirrors sim). */
-const ESCAPE_SECONDS = 11
-
-/** Center HUD for cop-chase mode: bust meter, escape warning, catch banner. */
-function ChaseHud({ chase }: { chase: ChaseStats }) {
-  const onTarget = chase.suspectDist < 9
-  const bustPct = Math.round(chase.bust * 100)
-  return (
-    <>
-      {chase.banner > 0 && <div className="chase-banner">🚔 SUSPECT CAUGHT!</div>}
-
-      {chase.escapeWarn > 0.05 && (
-        <div className="status-banner spotted">
-          🏃 SUSPECT FLEEING
-          <span className="status-sub"> · {Math.ceil((1 - chase.escapeWarn) * ESCAPE_SECONDS)}s to catch</span>
-        </div>
-      )}
-
-      <div className={`bust-meter ${onTarget ? 'active' : ''}`}>
-        <div className="bust-label">{onTarget ? 'BUSTING…' : 'Close in to bust'}</div>
-        <div className="bust-track">
-          <div className="bust-fill" style={{ width: `${bustPct}%` }} />
-        </div>
-      </div>
-    </>
-  )
-}
-
 export function HUD() {
   const stats = useGameStore((s) => s.stats)
   const showMinimap = useSettingsStore((s) => s.minimap)
   const speedReadout = Math.round(stats.speed * 7)
   const capturePct = Math.round(stats.capture * 100)
-  const pursuit = stats.mode === 'pursuit'
-  const isRace = stats.mode === 'race' || stats.mode === 'endless'
 
-  if (isRace) {
+  if (stats.mode === 'race') {
     if (!stats.race) return <div className="hud" />
     return (
       <div className="hud">
@@ -171,9 +126,7 @@ export function HUD() {
           <RaceHud race={stats.race} />
         </div>
         <div className="hud-hint">
-          {stats.race.endless
-            ? 'A / D or ←/→ to steer · you can’t stop — don’t fall off! · P pause'
-            : 'WASD drive · Space drift · dodge the barriers · beat your best lap · P pause'}
+          WASD drive · Space drift · dodge the barriers · beat your best lap · P pause
         </div>
       </div>
     )
@@ -184,12 +137,6 @@ export function HUD() {
       <div className="hud-top">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {pursuit && stats.chase && (
-              <div className="hud-stat caught">
-                <div className="label">Caught</div>
-                <div className="value">{stats.chase.caught}</div>
-              </div>
-            )}
             <div className="hud-stat">
               <div className="label">Time</div>
               <div className="value">{formatTime(stats.time)}</div>
@@ -203,34 +150,26 @@ export function HUD() {
               <div className="value">{speedReadout}</div>
             </div>
           </div>
-          {!pursuit && <HeatMeter heat={stats.heat} />}
+          <HeatMeter heat={stats.heat} />
         </div>
       </div>
 
       <div className="hud-center">
-        {pursuit && stats.chase ? (
-          <ChaseHud chase={stats.chase} />
-        ) : (
-          <>
-            <StatusBanner status={stats.status} policeCount={stats.policeCount} />
-            {stats.capture > 0.02 && (
-              <div className={`capture-warn ${stats.capture > 0.6 ? 'critical' : ''}`}>
-                <div className="capture-label">{capturePct >= 60 ? 'BEING BUSTED!' : 'Capture'}</div>
-                <div className="capture-track">
-                  <div className="capture-fill" style={{ width: `${capturePct}%` }} />
-                </div>
-              </div>
-            )}
-          </>
+        <StatusBanner status={stats.status} policeCount={stats.policeCount} />
+        {stats.capture > 0.02 && (
+          <div className={`capture-warn ${stats.capture > 0.6 ? 'critical' : ''}`}>
+            <div className="capture-label">{capturePct >= 60 ? 'BEING BUSTED!' : 'Capture'}</div>
+            <div className="capture-track">
+              <div className="capture-fill" style={{ width: `${capturePct}%` }} />
+            </div>
+          </div>
         )}
         <PowerHud banner={stats.powerBanner} boost={stats.boost} shield={stats.shield} cloak={stats.cloak} />
       </div>
 
       <div className="hud-bottom">
         <div className="hud-vehicle">
-          {pursuit ? (
-            <div className="label">🚔 On patrol — run the suspect down</div>
-          ) : stats.vehicleName ? (
+          {stats.vehicleName ? (
             <>
               <div className="label">{stats.vehicleName}</div>
               <div className="dura-track">
@@ -257,9 +196,7 @@ export function HUD() {
       {showMinimap && <Minimap />}
 
       <div className="hud-hint">
-        {pursuit
-          ? 'WASD · Space drift · ram or tail the suspect · P pause'
-          : `WASD · ${stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · P pause`}
+        {`WASD · ${stats.vehicleName ? 'Space drift' : 'drag to look'} · E steal / exit · P pause`}
       </div>
     </div>
   )

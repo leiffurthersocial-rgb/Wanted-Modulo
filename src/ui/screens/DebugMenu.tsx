@@ -177,7 +177,7 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
             <Slider value={d.scoreMult} min={0} max={20} step={0.5} onChange={(v) => d.set('scoreMult', v)} />
           </div>
 
-          <h3>Race &amp; Endless</h3>
+          <h3>Race</h3>
           <div className="setting-row">
             <span className="k">No Fall Off (gaps &amp; edges)</span>
             <Toggle value={d.raceNoFall} onChange={(v) => d.set('raceNoFall', v)} />
@@ -192,22 +192,7 @@ export function DebugMenu({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          <h3>Cop Chase</h3>
-          <div className="setting-row">
-            <span className="k">Suspect Can't Escape</span>
-            <Toggle value={d.chaseNoEscape} onChange={(v) => d.set('chaseNoEscape', v)} />
-          </div>
-          <div className="setting-row">
-            <span className="k">Bust Current Suspect</span>
-            <button
-              className="btn ghost small"
-              onClick={() => d.set('chaseCatchPing', d.chaseCatchPing + 1)}
-            >
-              Bust
-            </button>
-          </div>
-
-          <h3>Actions · survive &amp; chase</h3>
+          <h3>Actions</h3>
           <div className="setting-row">
             <span className="k">Repair Vehicle</span>
             <button className="btn ghost small" onClick={() => d.set('repairPing', d.repairPing + 1)}>
