@@ -90,6 +90,51 @@ export const VEHICLES: Record<string, VehicleDef> = {
     durability: 110,
     size: { length: 4.4, width: 2.0, height: 1.4 },
   },
+
+  /* ---- Secret / rare finds (not in the common spawn pool) ---- */
+  phantom: {
+    id: 'phantom',
+    name: 'Phantom',
+    category: 'sports',
+    // A hypercar — absurdly fast and grippy, but fragile. The ultimate escape.
+    color: '#b388ff',
+    topSpeed: 54,
+    accel: 33,
+    handling: 2.9,
+    weight: 0.7,
+    durability: 60,
+    size: { length: 4.2, width: 1.95, height: 1.05 },
+  },
+  moped: {
+    id: 'moped',
+    name: 'Moped',
+    category: 'compact',
+    // Tiny and razor-nimble — threads between cops, but slow-topped and frail.
+    color: '#ffd54f',
+    topSpeed: 30,
+    accel: 22,
+    handling: 3.7,
+    weight: 0.3,
+    durability: 20,
+    size: { length: 1.9, width: 0.8, height: 1.2 },
+  },
+  titan: {
+    id: 'titan',
+    name: 'Titan',
+    category: 'suv',
+    // A monster truck — slow to wind up but near-unstoppable and crushes cruisers.
+    color: '#3e5159',
+    topSpeed: 29,
+    accel: 12,
+    handling: 1.5,
+    weight: 2.7,
+    durability: 340,
+    size: { length: 5.0, width: 2.5, height: 2.4 },
+  },
 }
 
-export const VEHICLE_IDS = Object.keys(VEHICLES)
+/** Common civilian cars that fill the streets. */
+export const VEHICLE_IDS = ['hatchback', 'cruiser', 'ranger', 'viper', 'hauler', 'workhorse', 'brute']
+
+/** Rare "secret" vehicles — sprinkled sparsely so finding one feels special. */
+export const RARE_VEHICLE_IDS = ['phantom', 'moped', 'titan']

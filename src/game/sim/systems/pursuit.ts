@@ -113,9 +113,11 @@ function activate(
 }
 
 /**
- * Finds a spawn point near the player that isn't inside a building or river —
- * always behind the player so units never pop into view in front of them. The
- * forward cone (POLICE.frontClearCone half-angle) is strictly excluded.
+ * Finds a spawn point near the player that isn't inside a building or river.
+ * Units can appear anywhere around the player EXCEPT a narrow dead-ahead cone
+ * (POLICE.frontClearCone half-angle), and always at the full spawn radius — so
+ * they can cut you off from ahead-left/right and the sides without ever popping
+ * up right in your path, leaving room to swerve clear.
  */
 function findSpawnPoint(state: SimState, radius: number): [number, number] {
   const p = state.player.pos
@@ -140,8 +142,8 @@ function findSpawnPoint(state: SimState, radius: number): [number, number] {
 }
 
 function deployRoadblock(state: SimState, tier: HeatTier): void {
-  // Pursuit surge: a burst of extra units spawned behind the player (never in
-  // front) that immediately give chase — a wave that closes from the rear.
+  // Pursuit surge: a burst of extra units that close in from around the player
+  // (ahead-left/right and the sides, but never dead-ahead) and give chase.
   for (let i = 0; i < 3; i++) {
     const u = inactiveUnit(state)
     if (!u) return

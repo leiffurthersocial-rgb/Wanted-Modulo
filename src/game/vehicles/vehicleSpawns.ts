@@ -2,7 +2,7 @@ import type { VehicleDef } from '@/types'
 import { CITY_PITCH } from '@/config/constants'
 import { mulberry32, streamBuildings } from '@/game/world/cityModel'
 import { isWater } from '@/game/world/terrain'
-import { VEHICLES, VEHICLE_IDS } from './vehicleCatalog'
+import { VEHICLES, VEHICLE_IDS, RARE_VEHICLE_IDS } from './vehicleCatalog'
 
 export interface VehicleSpawn {
   def: VehicleDef
@@ -40,6 +40,21 @@ function build(): VehicleSpawn[] {
     if (isWater(x, z)) continue
     const id = VEHICLE_IDS[(rand() * VEHICLE_IDS.length) | 0]
     list.push({ def: VEHICLES[id], position: [x, 0, z], heading: rand() * Math.PI * 2 })
+  }
+
+  // Sprinkle a few rare "secret" vehicles, tucked away from the spawn plaza.
+  // They join the recycled pool, so they keep drifting back into play sparsely.
+  let rares = 0
+  for (const b of streamBuildings(0, 0, 360)) {
+    if (rares >= 3) break
+    if (rand() > 0.03) continue
+    const side = (rand() * 4) | 0
+    const x = b.x + (side === 0 ? o : side === 1 ? -o : 0)
+    const z = b.z + (side === 2 ? o : side === 3 ? -o : 0)
+    if (isWater(x, z) || Math.hypot(x, z) < 60) continue
+    const id = RARE_VEHICLE_IDS[rares % RARE_VEHICLE_IDS.length]
+    list.push({ def: VEHICLES[id], position: [x, 0, z], heading: rand() * Math.PI * 2 })
+    rares++
   }
   return list
 }
